@@ -4,32 +4,12 @@ import { getDb } from '@/db';
 import { canOrgWide } from '@/core/auth/context';
 import { requireAuthPage } from '@/core/auth/server';
 import { isId } from '@/core/ids';
+import { AUDIT_LABELS } from '@/modules/audit/labels';
 import { listAudit } from '@/modules/audit/service';
 import { Forbidden } from '@/ui/forbidden';
 import { EmptyState } from '@/ui/states';
 
 export const metadata: Metadata = { title: 'Auditoria' };
-
-const LABELS: Record<string, string> = {
-  'auth.login': 'Login',
-  'auth.login_failed': 'Falha de login',
-  'auth.logout': 'Logout',
-  'auth.password_reset_completed': 'Senha redefinida',
-  'user.password_reset_issued': 'Link de senha gerado',
-  'invitation.created': 'Convite criado',
-  'invitation.accepted': 'Convite aceito',
-  'invitation.revoked': 'Convite revogado',
-  'membership.role_changed': 'Função alterada',
-  'membership.removed': 'Vínculo removido',
-  'role.created': 'Função criada',
-  'role.updated': 'Função alterada',
-  'role.deleted': 'Função excluída',
-  'session.revoked': 'Sessão encerrada',
-  'session.revoked_others': 'Outras sessões encerradas',
-  'client.created': 'Cliente criado',
-  'client.updated': 'Cliente alterado',
-  'client.deleted': 'Cliente excluído',
-};
 
 export default async function AuditPage({
   searchParams,
@@ -39,7 +19,7 @@ export default async function AuditPage({
   const { ctx } = await requireAuthPage();
   if (!canOrgWide(ctx, 'audit:view')) return <Forbidden />;
   const sp = await searchParams;
-  const action = sp.action && LABELS[sp.action] ? sp.action : undefined;
+  const action = sp.action && AUDIT_LABELS[sp.action] ? sp.action : undefined;
   const { items, nextBefore } = await listAudit(getDb(), ctx, {
     before: isId(sp.before) ? sp.before : undefined,
     action,
@@ -54,7 +34,7 @@ export default async function AuditPage({
           <label htmlFor="f-action">Tipo de evento</label>
           <select id="f-action" name="action" className="input" defaultValue={action ?? ''}>
             <option value="">Todos</option>
-            {Object.entries(LABELS).map(([k, v]) => (
+            {Object.entries(AUDIT_LABELS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
               </option>
@@ -95,7 +75,7 @@ export default async function AuditPage({
                     })}
                   </td>
                   <td>{i.actorName ?? 'Sistema/Desconhecido'}</td>
-                  <td>{LABELS[i.action] ?? i.action}</td>
+                  <td>{AUDIT_LABELS[i.action] ?? i.action}</td>
                   <td className="hide-mobile muted">
                     {i.metadata ? JSON.stringify(i.metadata) : ''}
                   </td>

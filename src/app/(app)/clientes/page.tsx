@@ -8,10 +8,15 @@ import { ClientsClient } from './clients-client';
 
 export const metadata: Metadata = { title: 'Clientes' };
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const { ctx } = await requireAuthPage();
   if (!ctx.grants.some((g) => g.permissions.has('clients:view'))) return <Forbidden />;
-  const rows = await listClients(getDb(), ctx);
+  const rows = await listClients(getDb(), ctx, { q });
   return (
     <>
       <div className="page-head">
@@ -20,6 +25,11 @@ export default async function ClientsPage() {
       <p className="muted">
         Cadastro mínimo (nome). O cadastro completo de clientes e marcas chega na Etapa 04.
       </p>
+      {q && (
+        <p className="muted">
+          Filtrando por “{q}”. <a href="/clientes">Limpar filtro</a>
+        </p>
+      )}
       <ClientsClient
         clients={rows.map((c) => ({
           id: c.id,

@@ -34,7 +34,17 @@
 
 Eventos: login, falha de login, logout, convite (criado/aceito/revogado), mudança/remoção de vínculo, funções, links de senha, sessões encerradas, clientes. Registro **imutável por convenção de código** (a aplicação não oferece update/delete). Metadados passam por redação e **nunca** recebem senhas, tokens ou hashes (testado). A falha de login guarda apenas um prefixo de hash do e-mail digitado.
 
+## Notificações, busca e troca de organização (Etapa 03)
+
+- **Notificações:** toda consulta filtra por destinatário **e** organização ativa. Marcar como lida a notificação de outra pessoa responde 404. Links são sempre caminhos internos (`//host` e `https://` são recusados). Respeitam as preferências de cada usuário.
+- **Busca:** reutiliza o controle de acesso do módulo de origem (clientes pelo escopo do usuário; pessoas só com `team:view` na organização). O texto digitado é tratado literalmente no `LIKE` (curingas escapados). Mínimo de 2 caracteres.
+- **Troca de organização:** o vínculo é revalidado no servidor; organização alheia é indistinguível de inexistente (404), a sessão não muda e a troca é auditada na organização de destino.
+- **Dashboard:** filtros vêm da URL e são normalizados (período aceita 7/30/90; cliente só vale se estiver no escopo do usuário).
+
 ## Limitações conhecidas (declaradas)
+
+- **Limite de datas do MySQL:** as colunas `TIMESTAMP` só aceitam datas até 19/01/2038. Hoje não afeta nada (sessões e convites expiram em dias), mas **datas de planejamento editorial devem usar `DATETIME`** nas próximas etapas.
+- Notificações de remoção de vínculo e de sessão encerrada **não existem**, pois o destinatário perde o acesso à organização em que seriam exibidas.
 
 - **Sem 2FA/TOTP** (planejado para a Etapa 11).
 - **Bloqueio por e-mail pode ser usado para travar a conta de alguém por 15 min** (compromisso aceito; o limite por IP é independente).

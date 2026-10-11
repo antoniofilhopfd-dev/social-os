@@ -1,12 +1,12 @@
 import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { BASE, uiLogin } from './helpers';
+import { BASE, fx, seedNotification, uiLogin } from './helpers';
 
 // Só roda com SCREENSHOTS=1 (npm run screenshots:e2e). Gera prints reais do app em execução.
 test.skip(!process.env.SCREENSHOTS, 'defina SCREENSHOTS=1 para gerar os prints');
 test.describe.configure({ mode: 'serial' });
 
-const OUT = 'screenshots/etapa-02';
+const OUT = 'screenshots/etapa-03';
 const sizes = [
   ['desktop-1440', 1440, 900],
   ['tablet-768', 768, 1024],
@@ -22,61 +22,66 @@ async function shot(page: Page, name: string, size: string, full = true) {
 
 for (const [size, width, height] of sizes) {
   test(`prints ${size}`, async ({ browser }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(150_000);
+    const { A } = fx();
+    await seedNotification('dona.a@example.test', `Aviso de exemplo (${size})`, A);
     const ctx = await browser.newContext({ baseURL: BASE, viewport: { width, height } });
     const page = await ctx.newPage();
-
-    await page.goto('/login');
-    await shot(page, '01-login', size);
-    await page.getByLabel('E-mail').fill('dona.a@example.test');
-    await page.getByLabel('Senha').fill('senha-errada-123456');
-    await page.getByRole('button', { name: 'Entrar' }).click();
-    await page.locator('.alert-danger').waitFor();
-    await shot(page, '02-login-erro', size);
-
     await uiLogin(page, 'dona.a@example.test');
-    await shot(page, '03-inicio', size);
+    await shot(page, '01-dashboard', size);
 
+    await page.getByLabel('Cliente', { exact: true }).selectOption({ label: 'Cliente A1' });
+    await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+    await page.waitForURL(/cliente=/);
+    await shot(page, '02-dashboard-filtrado-por-cliente', size);
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /Buscar/ }).click();
+    await page.getByLabel('Buscar clientes e pessoas').fill('Cliente A');
+    await page
+      .getByRole('dialog', { name: 'Busca' })
+      .getByRole('link', { name: 'Cliente A1', exact: true })
+      .waitFor();
+    await shot(page, '03-busca-aberta', size, false);
+    await page.keyboard.press('Escape');
+
+    await page.goto('/notificacoes');
+    await shot(page, '04-notificacoes', size);
+    await page.goto('/notificacoes/preferencias');
+    await shot(page, '05-preferencias-notificacao', size);
     await page.goto('/equipe');
-    await page.getByLabel('Nome', { exact: true }).fill(`Pessoa ${size}`);
-    await page.getByLabel('E-mail', { exact: true }).fill(`pessoa.${size}@example.test`);
-    await page.getByLabel('Função', { exact: true }).selectOption({ label: 'Redator' });
-    await page.getByRole('button', { name: 'Gerar convite' }).click();
-    await page.getByTestId('generated-link').waitFor();
-    await shot(page, '04-equipe-convite-gerado', size);
+    await shot(page, '06-equipe-no-novo-layout', size);
 
-    const invite = (await page.getByTestId('generated-link').textContent())!.trim();
-    const guest = await browser.newContext({ baseURL: BASE, viewport: { width, height } });
-    const g = await guest.newPage();
-    await g.goto(invite);
-    await shot(g, '05-aceitar-convite', size);
-    await g.goto('/convite/token-invalido-xxxxxxxxxxxxxxxxxxxxxxxx');
-    await shot(g, '06-convite-invalido', size);
-    await guest.close();
-
-    await page.goto('/funcoes');
-    await page.getByRole('button', { name: 'Gestor da operação', exact: true }).click();
-    await shot(page, '07-funcoes-matriz', size);
-    await page.goto('/clientes');
-    await shot(page, '08-clientes', size);
-    await page.goto('/auditoria');
-    await shot(page, '09-auditoria', size);
-    await page.goto('/minhas-sessoes');
-    await shot(page, '10-minhas-sessoes', size);
+    if (width < 900) {
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('button', { name: 'Abrir menu' }).click();
+      await page.getByRole('dialog', { name: 'Menu' }).waitFor();
+      await shot(page, '07-menu-gaveta-aberta', size, false);
+    }
     await ctx.close();
 
-    const w = await browser.newContext({ baseURL: BASE, viewport: { width, height } });
-    const wp = await w.newPage();
-    await uiLogin(wp, 'redator.a@example.test');
-    await wp.goto('/equipe');
-    await shot(wp, '11-acesso-negado-redator', size);
-    await w.close();
+    const m = await browser.newContext({ baseURL: BASE, viewport: { width, height } });
+    const mp = await m.newPage();
+    await uiLogin(mp, 'multi.org@example.test');
+    await mp.goto('/clientes');
+    await shot(mp, '08-multi-organizacao-na-agencia-A', size);
+    await mp.getByLabel('Organização ativa').selectOption({ label: 'Agência B' });
+    await mp
+      .getByRole('navigation', { name: 'Principal' })
+      .getByRole('link', { name: 'Equipe' })
+      .or(mp.getByRole('button', { name: 'Abrir menu' }))
+      .first()
+      .waitFor();
+    await mp.goto('/');
+    await shot(mp, '09-multi-organizacao-na-agencia-B', size);
+    await m.close();
 
-    const s = await browser.newContext({ baseURL: BASE, viewport: { width, height } });
-    const sp = await s.newPage();
-    await uiLogin(sp, 'consulta.a1@example.test');
-    await sp.goto('/clientes');
-    await shot(sp, '12-clientes-escopo-A1', size);
-    await s.close();
+    const r = await browser.newContext({ baseURL: BASE, viewport: { width, height } });
+    const rp = await r.newPage();
+    await uiLogin(rp, 'redator.a@example.test');
+    await shot(rp, '10-dashboard-do-redator', size);
+    await r.close();
   });
 }

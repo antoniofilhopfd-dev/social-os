@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like } from 'drizzle-orm';
 import type { Db } from '@/db';
 import { clients } from '@/db/schema';
 import { audit } from '@/core/audit';
@@ -9,7 +9,7 @@ import { newId } from '@/core/ids';
 const notFound = () => new AppError('NOT_FOUND', 'Cliente não encontrado.');
 
 /** Condição base de TODA consulta de clientes: organização do contexto + escopo permitido + não excluído. */
-function visible(ctx: Ctx, perm: string) {
+export function visible(ctx: Ctx, perm: string) {
   const scope = clientScope(ctx, perm);
   const base = [eq(clients.organizationId, ctx.organizationId), isNull(clients.deletedAt)];
   if (scope.all) return and(...base);
@@ -17,13 +17,20 @@ function visible(ctx: Ctx, perm: string) {
   return and(...base, inArray(clients.id, scope.clientIds));
 }
 
-export async function listClients(db: Db, ctx: Ctx) {
+/** Escapa curingas do LIKE para que o texto digitado seja tratado literalmente. */
+export const likePattern = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+
+export async function listClients(db: Db, ctx: Ctx, opts: { q?: string; limit?: number } = {}) {
   requireAnyScope(ctx, 'clients:view'); // o escopo fino vem da condição `visible`
-  return db
+  const where = [visible(ctx, 'clients:view')];
+  const q = opts.q?.trim();
+  if (q) where.push(like(clients.name, likePattern(q)));
+  const query = db
     .select({ id: clients.id, name: clients.name, createdAt: clients.createdAt })
     .from(clients)
-    .where(visible(ctx, 'clients:view'))
+    .where(and(...where))
     .orderBy(clients.name);
+  return opts.limit ? query.limit(opts.limit) : query;
 }
 
 export async function getClient(db: Db, ctx: Ctx, id: string) {

@@ -142,3 +142,26 @@ export const auditLogs = mysqlTable('audit_logs', {
   ip: varchar('ip', { length: 64 }),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+export const notifications = mysqlTable('notifications', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  userId: id('user_id').notNull(),
+  type: varchar('type', { length: 48 }).notNull(),
+  title: varchar('title', { length: 190 }).notNull(),
+  body: varchar('body', { length: 500 }).notNull().default(''),
+  link: varchar('link', { length: 255 }),
+  readAt: ts('read_at'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const notificationPreferences = mysqlTable(
+  'notification_preferences',
+  {
+    userId: id('user_id').notNull(),
+    type: varchar('type', { length: 48 }).notNull(),
+    enabled: tinyint('enabled').notNull().default(1),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.type] })],
+);

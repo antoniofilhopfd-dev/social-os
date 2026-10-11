@@ -1,13 +1,14 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
-import { memberships } from '@/db/schema';
+import { memberships, notifications } from '@/db/schema';
 import { resetDatabase, world } from '../helpers/db';
 import { PASSWORD } from './constants';
 import { systemRoleId } from '@/core/permissions/seed';
 import { createClient } from '@/modules/clients/service';
 import { createRole } from '@/modules/roles/service';
 import { createInvitation } from '@/modules/team/service';
+import { notify } from '@/modules/notifications/service';
 
 export default async function globalSetup() {
   await resetDatabase();
@@ -39,6 +40,19 @@ export default async function globalSetup() {
     const clientB1 = (await createClient(w.db, ownerB.ctx, { name: 'Cliente B1' })).id;
     await make(A, 'viewer', 'consulta.a1@example.test', { clientId: clientA1 });
     await make(A, 'client', 'cliente.a1@example.test', { clientId: clientA1 });
+    // Pessoa que pertence às duas organizações (redator na A, proprietária na B): testa a troca de organização.
+    const multi = await make(A, 'writer', 'multi.org@example.test');
+    await w.member({ orgId: B, userId: multi.userId, role: 'owner' });
+    await notify(w.db, {
+      organizationId: A,
+      userId: ownerA.userId,
+      type: 'role_changed',
+      title: 'Notificação inicial da dona A',
+    });
+    const [notifA] = await w.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, ownerA.userId));
     const roleA = (
       await createRole(w.db, ownerA.ctx, {
         name: 'Função Personalizada A',
@@ -69,6 +83,7 @@ export default async function globalSetup() {
         membershipWriterA: memWriterA!.id,
         writerAUserId: writerA.userId,
         ownerAUserId: ownerA.userId,
+        notificationA: notifA!.id,
       }),
     );
   } finally {

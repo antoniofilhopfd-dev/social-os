@@ -29,6 +29,10 @@ migrations/         SQL versionado (NNNN_nome.up.sql / .down.sql)
 | Arquivos   | Interface `StorageDriver`; driver local rejeita chaves com travessia de diretório e não sobrescreve objetos                                                  | Troca futura para S3 sem reescrever módulos.                                                                                                        |
 | Cabeçalhos | `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`; sem `X-Powered-By`                                                              | CSP completa será definida junto da autenticação (Etapa 02), pois depende de scripts do Next.                                                       |
 
+## Etapa 03
+
+Shell responsivo (sidebar no desktop, gaveta no celular), dashboard com provedores de pendências, busca global, notificações internas com preferências e troca de organização. Para conectar módulos novos veja [EXTENSAO-MODULOS.md](EXTENSAO-MODULOS.md). O `<main>` é declarado por cada área (público, shell, design system), e a CSP com nonce exige renderização dinâmica.
+
 ## O que NÃO existe ainda
 
 Autenticação, multiempresa, tabelas de domínio, upload de usuário, backup funcional e qualquer integração externa.

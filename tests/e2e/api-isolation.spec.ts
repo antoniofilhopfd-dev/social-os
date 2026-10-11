@@ -43,6 +43,13 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['PATCH', `/api/clients/${f.clientA1}`],
   ['DELETE', `/api/clients/${f.clientA1}`],
   ['GET', '/api/audit'],
+  ['GET', '/api/notifications'],
+  ['POST', '/api/notifications/read-all'],
+  ['POST', `/api/notifications/${ID}/read`],
+  ['GET', '/api/notifications/preferences'],
+  ['PUT', '/api/notifications/preferences'],
+  ['GET', '/api/search?q=cliente'],
+  ['POST', '/api/session/organization'],
 ];
 
 test('sem sessão, TODAS as rotas protegidas respondem 401 (e nada é alterado)', async () => {
@@ -134,7 +141,10 @@ test('listagens da org B não vazam dados da org A', async () => {
   const clients = (await (await ownerB.get('/api/clients')).json()).clients;
   expect(clients.map((c: { id: string }) => c.id)).toEqual([f.clientB1]);
   const team = await (await ownerB.get('/api/team')).json();
-  expect(team.members.map((m: { email: string }) => m.email)).toEqual(['dono.b@example.test']);
+  expect(team.members.map((m: { email: string }) => m.email).sort()).toEqual([
+    'dono.b@example.test',
+    'multi.org@example.test',
+  ]);
   expect(team.invitations).toHaveLength(0);
   expect(
     (await (await ownerB.get('/api/roles')).json()).roles.some(
@@ -243,4 +253,78 @@ test('páginas internas redirecionam ao login sem sessão e a CSP com nonce est�
   expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
   expect(csp).toContain("frame-ancestors 'none'");
   expect(csp).not.toContain('unsafe-eval');
+});
+
+test('notificações: ninguém lê nem marca a notificação de outro usuário', async () => {
+  const f = fx();
+  const mine = (await (await ownerA.get('/api/notifications')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(mine).toContain(f.notificationA);
+  expect((await ownerB.get('/api/notifications')).status()).toBe(200);
+  const theirs = (await (await ownerB.get('/api/notifications')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(theirs).not.toContain(f.notificationA);
+  expect((await ownerB.post(`/api/notifications/${f.notificationA}/read`)).status()).toBe(404);
+  // a sessão original do redator foi encerrada pelo teste anterior; entra de novo
+  const writer = await apiLogin('redator.a@example.test');
+  expect((await writer.post(`/api/notifications/${f.notificationA}/read`)).status()).toBe(404);
+  await writer.dispose();
+  const still = (await (await ownerA.get('/api/notifications?unread=1')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(still).toContain(f.notificationA);
+  expect(
+    (
+      await ownerA.put('/api/notifications/preferences', {
+        data: { type: 'inexistente', enabled: false },
+      })
+    ).status(),
+  ).toBe(400);
+});
+
+test('busca: respeita organização e escopo de cliente', async () => {
+  const f = fx();
+  const a = await (await ownerA.get('/api/search?q=cliente')).json();
+  const aIds = a.clients.map((c: { id: string }) => c.id);
+  expect(aIds).toEqual(expect.arrayContaining([f.clientA1, f.clientA2]));
+  expect(aIds).not.toContain(f.clientB1);
+  const b = await (await ownerB.get('/api/search?q=cliente')).json();
+  expect(b.clients.map((c: { id: string }) => c.id)).toEqual([f.clientB1]);
+  const scoped = await (await scopedA1.get('/api/search?q=cliente')).json();
+  expect(scoped.clients.map((c: { id: string }) => c.id)).toEqual([f.clientA1]);
+  expect(scoped.people).toEqual([]);
+  const people = await (await ownerB.get('/api/search?q=example.test')).json();
+  expect(JSON.stringify(people)).not.toContain('dona.a@example.test');
+  expect((await ownerA.get('/api/search?q=%25')).status()).toBe(200);
+  expect((await (await ownerA.get('/api/search?q=%25%25')).json()).clients).toEqual([]);
+});
+
+test('troca de organização: não-membro recebe 404 e a sessão não muda', async () => {
+  const f = fx();
+  expect(
+    (await ownerB.post('/api/session/organization', { data: { organizationId: f.A } })).status(),
+  ).toBe(404);
+  expect((await ownerB.get('/api/clients')).status()).toBe(200);
+  const b = (await (await ownerB.get('/api/clients')).json()).clients.map(
+    (c: { id: string }) => c.id,
+  );
+  expect(b).toEqual([f.clientB1]);
+  expect(
+    (
+      await ownerB.post('/api/session/organization', { data: { organizationId: 'nao-e-id' } })
+    ).status(),
+  ).toBe(400);
+  const multi = await apiLogin('multi.org@example.test');
+  expect((await multi.get('/api/team')).status()).toBe(403); // redator na A
+  expect(
+    (await multi.post('/api/session/organization', { data: { organizationId: f.B } })).status(),
+  ).toBe(200);
+  expect((await multi.get('/api/team')).status()).toBe(200); // proprietária na B
+  const clients = (await (await multi.get('/api/clients')).json()).clients.map(
+    (c: { id: string }) => c.id,
+  );
+  expect(clients).toEqual([f.clientB1]);
+  await multi.dispose();
 });

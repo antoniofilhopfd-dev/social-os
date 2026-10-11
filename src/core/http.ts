@@ -25,7 +25,7 @@ export interface AuthedArgs<P> extends Omit<RouteArgs<P>, 'auth'> {
   ctx: Ctx;
 }
 
-type Handler<A> = (args: A) => Promise<Response | Record<string, unknown> | void>;
+type Handler<A> = (args: A) => Promise<Response | object | void>;
 
 function failure(err: unknown, requestId: string) {
   if (err instanceof ZodError) {

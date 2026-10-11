@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { request, type APIRequestContext, type Page } from '@playwright/test';
+import { eq } from 'drizzle-orm';
+import { users } from '@/db/schema';
+import { notify } from '@/modules/notifications/service';
+import { world } from '../helpers/db';
 import { PASSWORD } from './constants';
 
 export const BASE = 'http://localhost:3100';
@@ -17,6 +21,7 @@ export interface Fixtures {
   membershipWriterA: string;
   writerAUserId: string;
   ownerAUserId: string;
+  notificationA: string;
 }
 export const fx = (): Fixtures =>
   JSON.parse(readFileSync(path.resolve(__dirname, '.fixtures.json'), 'utf8'));
@@ -37,4 +42,15 @@ export async function uiLogin(page: Page, email: string, password = PASSWORD) {
   await page.getByLabel('Senha').fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.waitForURL(`${BASE}/`);
+}
+
+/** Cria uma notificação de teste direto no banco de testes (a origem real é testada nos testes de integração). */
+export async function seedNotification(email: string, title: string, orgId: string) {
+  const w = world();
+  try {
+    const [u] = await w.db.select().from(users).where(eq(users.email, email));
+    await notify(w.db, { organizationId: orgId, userId: u!.id, type: 'role_changed', title });
+  } finally {
+    await w.close();
+  }
 }

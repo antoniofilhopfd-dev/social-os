@@ -18,7 +18,7 @@ const colors = [
 
 export default function DesignSystemPage() {
   return (
-    <div className="container">
+    <main id="conteudo" className="container">
       <h1>Design system</h1>
       <p className="muted">
         Página interna de conferência visual da Etapa 01. Os dados abaixo são apenas exemplos de
@@ -159,6 +159,6 @@ export default function DesignSystemPage() {
           />
         </div>
       </section>
-    </div>
+    </main>
   );
 }

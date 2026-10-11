@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, eq, isNull, like, ne, or } from 'drizzle-orm';
 import type { Db } from '@/db';
 import { clients, invitations, memberships, roles, sessions, users } from '@/db/schema';
 import { audit } from '@/core/audit';
@@ -8,6 +8,8 @@ import { isDuplicateEntry } from '@/core/db';
 import { AppError } from '@/core/errors';
 import { newId } from '@/core/ids';
 import { permissionsOfRoles } from '@/core/permissions/seed';
+import { notify } from '@/modules/notifications/service';
+import { likePattern } from '@/modules/clients/service';
 import { INVITE_TTL_MS, issuePasswordReset, normalizeEmail } from '@/modules/auth/service';
 
 /** Função utilizável nesta organização: do sistema (sem dono) ou personalizada da própria organização. */
@@ -34,8 +36,9 @@ async function assertClientInOrg(db: Db, ctx: Ctx, clientId: string) {
   if (!c) throw new AppError('NOT_FOUND', 'Cliente não encontrado.');
 }
 
-export async function listTeam(db: Db, ctx: Ctx) {
+export async function listTeam(db: Db, ctx: Ctx, opts: { q?: string } = {}) {
   requireOrgWide(ctx, 'team:view');
+  const q = opts.q?.trim();
   const rows = await db
     .select({
       membershipId: memberships.id,
@@ -55,7 +58,12 @@ export async function listTeam(db: Db, ctx: Ctx) {
     .innerJoin(users, eq(users.id, memberships.userId))
     .innerJoin(roles, eq(roles.id, memberships.roleId))
     .leftJoin(clients, eq(clients.id, memberships.clientId))
-    .where(eq(memberships.organizationId, ctx.organizationId))
+    .where(
+      and(
+        eq(memberships.organizationId, ctx.organizationId),
+        q ? or(like(users.name, likePattern(q)), like(users.email, likePattern(q))) : undefined,
+      ),
+    )
     .orderBy(users.name);
   const pending = await db
     .select({
@@ -252,6 +260,14 @@ export async function changeMemberRole(db: Db, ctx: Ctx, membershipId: string, n
       throw new AppError('CONFLICT', 'Esta pessoa já possui essa função nesse escopo.');
     throw e;
   }
+  await notify(db, {
+    organizationId: ctx.organizationId,
+    userId: m.userId,
+    type: 'role_changed',
+    title: 'Sua função foi alterada',
+    body: `Nova função: ${role.name}.`,
+    link: '/',
+  });
   await audit(db, {
     organizationId: ctx.organizationId,
     actorUserId: ctx.userId,
@@ -323,6 +339,14 @@ export async function createResetLinkForMember(db: Db, ctx: Ctx, userId: string)
   );
   for (const set of perms.values()) assertCanGrant(ctx, set); // evita tomar a conta de alguém mais poderoso
   const reset = await issuePasswordReset(db, { userId, createdBy: ctx.userId });
+  await notify(db, {
+    organizationId: ctx.organizationId,
+    userId,
+    type: 'password_reset_issued',
+    title: 'Um administrador gerou um link de nova senha para a sua conta',
+    body: 'Se você não pediu isso, avise a administração e revise suas sessões.',
+    link: '/minhas-sessoes',
+  });
   await audit(db, {
     organizationId: ctx.organizationId,
     actorUserId: ctx.userId,

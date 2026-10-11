@@ -15,6 +15,7 @@ import { AppError } from '@/core/errors';
 import { newId } from '@/core/ids';
 import { burnVerification, hashPassword, validatePassword, verifyPassword } from '@/core/password';
 import { assertLoginAllowed, assertTokenAllowed, recordAttempt } from '@/core/rate-limit';
+import { notify } from '@/modules/notifications/service';
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const RESET_TTL_MS = 24 * 60 * 60 * 1000;
@@ -225,10 +226,24 @@ export async function acceptInvitation(
       metadata: { roleId: inv.roleId, newAccount: !existing },
       ip: input.ip,
     });
-    return { userId, organizationId: inv.organizationId, newAccount: !existing };
+    return {
+      userId,
+      organizationId: inv.organizationId,
+      newAccount: !existing,
+      invitedBy: inv.createdBy,
+      inviteeName: (input.name?.trim() || inv.name) as string,
+    };
   });
 
   await recordAttempt(db, 'token', 'invitation', input.ip, true);
+  await notify(db, {
+    organizationId: result.organizationId,
+    userId: result.invitedBy,
+    type: 'invitation_accepted',
+    title: `${result.inviteeName} aceitou o convite`,
+    body: 'A pessoa já tem acesso à organização.',
+    link: '/equipe',
+  });
   // Conta nova entra direto; conta existente já está autenticada e mantém a sessão atual.
   if (!result.newAccount) return { ...result, token: null as string | null };
   const session = await createSession(db, {

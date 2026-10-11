@@ -225,6 +225,8 @@ const pages = [
   '/clientes',
   '/auditoria',
   '/minhas-sessoes',
+  '/notificacoes',
+  '/notificacoes/preferencias',
   '/convite/token-invalido-xxxxxxxxxxxxxxxxxxxxxxxx',
 ];
 
