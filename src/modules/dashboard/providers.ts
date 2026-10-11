@@ -2,6 +2,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Db } from '@/db';
 import { clients, invitations, memberships, roles, users } from '@/db/schema';
 import { canOrgWide, type Ctx } from '@/core/auth/context';
+import { listContents } from '@/modules/contents/service';
 import { listRequests } from '@/modules/requests/service';
 
 export type Severity = 'alert' | 'info';
@@ -179,8 +180,57 @@ const requestAttention: PendingProvider = {
   },
 };
 
+const contentAttention: PendingProvider = {
+  id: 'contents.attention',
+  allowed: (ctx) =>
+    ctx.grants.some((g) => g.permissions.has('contents:view')) && ctx.userKind === 'internal',
+  async collect(db, ctx, f) {
+    const { items } = await listContents(
+      db,
+      ctx,
+      { status: 'open', clientId: f.clientId, limit: 100 },
+      f.now,
+    );
+    const out: PendingItem[] = [];
+    for (const c of items) {
+      const base = {
+        id: `content:${c.id}`,
+        kind: 'content',
+        href: `/conteudos/${c.id}`,
+        clientId: c.clientId,
+        clientName: c.clientName,
+      };
+      const when = c.scheduledDate ? c.scheduledDate.split('-').reverse().join('/') : '';
+      if (c.schedule === 'overdue') {
+        out.push({
+          ...base,
+          severity: 'alert',
+          title: `Conteúdo #${c.number} atrasado: ${c.title}`,
+          detail: `${c.clientName} · previsto para ${when} · ${c.assigneeName ?? 'sem responsável'}`,
+        });
+      } else if (c.schedule === 'due_soon') {
+        out.push({
+          ...base,
+          severity: 'alert',
+          title: `Publicação próxima e ainda não pronta: #${c.number}`,
+          detail: `${c.clientName} · ${c.title} · previsto para ${when}`,
+        });
+      } else if (c.assigneeUserId === ctx.userId && c.status === 'in_production') {
+        out.push({
+          ...base,
+          severity: 'info',
+          title: `Em produção com você: #${c.number} ${c.title}`,
+          detail: c.clientName,
+        });
+      }
+    }
+    return out.slice(0, 30);
+  },
+};
+
 export const PENDING_PROVIDERS: PendingProvider[] = [
   requestAttention,
+  contentAttention,
   pendingInvitations,
   externalNeverAccessed,
 ];

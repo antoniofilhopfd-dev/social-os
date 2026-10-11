@@ -9,7 +9,9 @@ import { AppError } from '@/core/errors';
 import { listBrands, listClientHistory, listContacts, listDates } from '@/modules/clients/children';
 import { getClient, listOwnerCandidates } from '@/modules/clients/service';
 import { Badge } from '@/ui/components';
+import { listCampaigns } from '@/modules/contents/campaigns';
 import { BrandsTab } from './brands-tab';
+import { CampaignsTab } from './campaigns-tab';
 import { ContactsTab, DatesTab } from './contacts-dates-tabs';
 import { GeneralTab } from './general-tab';
 import { HistoryTab } from './history-tab';
@@ -21,6 +23,7 @@ const TABS = [
   ['contatos', 'Contatos'],
   ['datas', 'Datas importantes'],
   ['marcas', 'Marcas e perfis'],
+  ['campanhas', 'Campanhas'],
   ['historico', 'Histórico'],
 ] as const;
 
@@ -108,6 +111,14 @@ export default async function ClientPage({
           clientId={id}
           brands={JSON.parse(JSON.stringify(await listBrands(db, ctx, id)))}
           owners={editable ? await listOwnerCandidates(db, ctx) : []}
+          canEdit={editable}
+          canDelete={deletable}
+        />
+      )}
+      {tab === 'campanhas' && (
+        <CampaignsTab
+          clientId={id}
+          campaigns={await listCampaigns(db, ctx, id)}
           canEdit={editable}
           canDelete={deletable}
         />

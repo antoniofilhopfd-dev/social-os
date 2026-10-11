@@ -5,6 +5,7 @@ import {
   int,
   smallint,
   text,
+  time,
   char,
   json,
   mysqlEnum,
@@ -337,4 +338,87 @@ export const requestEvents = mysqlTable('request_events', {
   metadata: json('metadata').$type<Record<string, unknown> | null>(),
   internalOnly: tinyint('internal_only').notNull().default(0),
   createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const CONTENT_FORMATS = [
+  'static_post',
+  'carousel',
+  'reels',
+  'stories',
+  'story_sequence',
+  'video',
+  'text',
+  'institutional',
+  'educational',
+  'promotional',
+  'other',
+] as const;
+export const CONTENT_STATUSES = [
+  'draft',
+  'in_production',
+  'internal_review',
+  'awaiting_client',
+  'changes_requested',
+  'approved',
+  'scheduled',
+  'published',
+  'cancelled',
+  'archived',
+] as const;
+
+export const contentPillars = mysqlTable('content_pillars', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  name: varchar('name', { length: 120 }).notNull(),
+  color: varchar('color', { length: 16 }).notNull().default('blue'),
+  description: varchar('description', { length: 500 }),
+  active: tinyint('active').notNull().default(1),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const campaigns = mysqlTable('campaigns', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  name: varchar('name', { length: 190 }).notNull(),
+  description: varchar('description', { length: 1000 }),
+  startDate: date('start_date', { mode: 'string' }),
+  endDate: date('end_date', { mode: 'string' }),
+  status: mysqlEnum('status', ['active', 'inactive']).notNull().default('active'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const contentCounters = mysqlTable('content_counters', {
+  organizationId: id('organization_id').primaryKey(),
+  lastNumber: int('last_number', { unsigned: true }).notNull().default(0),
+});
+
+export const contents = mysqlTable('contents', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  number: int('number', { unsigned: true }).notNull(),
+  clientId: id('client_id').notNull(),
+  brandId: id('brand_id'),
+  socialProfileId: id('social_profile_id'),
+  pillarId: id('pillar_id'),
+  campaignId: id('campaign_id'),
+  requestId: id('request_id'),
+  title: varchar('title', { length: 190 }).notNull(),
+  theme: varchar('theme', { length: 190 }),
+  objective: text('objective'),
+  audience: varchar('audience', { length: 500 }),
+  format: mysqlEnum('format', CONTENT_FORMATS).notNull(),
+  brief: text('brief'),
+  scheduledDate: date('scheduled_date', { mode: 'string' }),
+  scheduledTime: time('scheduled_time'),
+  assigneeUserId: id('assignee_user_id'),
+  priority: mysqlEnum('priority', PRIORITIES).notNull().default('normal'),
+  status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('draft'),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
 });

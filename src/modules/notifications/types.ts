@@ -28,6 +28,10 @@ export const NOTIFICATION_TYPES = {
     label: 'Informações ou comentário recebido',
     description: 'Quando o solicitante responde ou comenta em uma solicitação atribuída a você.',
   },
+  content_assigned: {
+    label: 'Conteúdo atribuído a você',
+    description: 'Quando um conteúdo é atribuído a você.',
+  },
   request_status_changed: {
     label: 'Situação da solicitação atualizada',
     description: 'Quando a situação de uma solicitação que você abriu muda.',

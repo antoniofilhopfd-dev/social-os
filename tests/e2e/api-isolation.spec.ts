@@ -50,6 +50,50 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['PUT', '/api/notifications/preferences'],
   ['GET', '/api/search?q=cliente'],
   ['POST', '/api/session/organization'],
+  // Etapa 04
+  ['GET', `/api/clients/${f.clientA1}/contacts`],
+  ['POST', `/api/clients/${f.clientA1}/contacts`],
+  ['PUT', `/api/clients/${f.clientA1}/contacts/${f.contactA}`],
+  ['DELETE', `/api/clients/${f.clientA1}/contacts/${f.contactA}`],
+  ['GET', `/api/clients/${f.clientA1}/dates`],
+  ['POST', `/api/clients/${f.clientA1}/dates`],
+  ['DELETE', `/api/clients/${f.clientA1}/dates/${f.dateA}`],
+  ['GET', `/api/clients/${f.clientA1}/brands`],
+  ['POST', `/api/clients/${f.clientA1}/brands`],
+  ['GET', `/api/clients/${f.clientA1}/history`],
+  ['PUT', `/api/brands/${f.brandA}`],
+  ['DELETE', `/api/brands/${f.brandA}`],
+  ['POST', `/api/brands/${f.brandA}/profiles`],
+  ['PUT', `/api/social-profiles/${f.profileA}`],
+  ['DELETE', `/api/social-profiles/${f.profileA}`],
+  ['GET', '/api/requests'],
+  ['POST', '/api/requests'],
+  ['GET', '/api/requests/assignees'],
+  ['GET', `/api/requests/${f.requestA1}`],
+  ['PATCH', `/api/requests/${f.requestA1}`],
+  ['POST', `/api/requests/${f.requestA1}/status`],
+  ['POST', `/api/requests/${f.requestA1}/assign`],
+  ['POST', `/api/requests/${f.requestA1}/comments`],
+  ['GET', '/api/request-types'],
+  ['POST', '/api/request-types'],
+  ['PUT', `/api/request-types/${f.typeA}`],
+  // Etapa 05
+  ['GET', '/api/contents'],
+  ['POST', '/api/contents'],
+  ['GET', `/api/contents/${f.contentA1}`],
+  ['PATCH', `/api/contents/${f.contentA1}`],
+  ['DELETE', `/api/contents/${f.contentA1}`],
+  ['POST', `/api/contents/${f.contentA1}/status`],
+  ['POST', `/api/contents/${f.contentA1}/duplicate`],
+  ['GET', `/api/contents/${f.contentA1}/history`],
+  ['GET', '/api/content-pillars'],
+  ['POST', '/api/content-pillars'],
+  ['PUT', `/api/content-pillars/${f.pillarA}`],
+  ['GET', `/api/clients/${f.clientA1}/campaigns`],
+  ['POST', `/api/clients/${f.clientA1}/campaigns`],
+  ['PUT', `/api/campaigns/${f.campaignA}`],
+  ['DELETE', `/api/campaigns/${f.campaignA}`],
+  ['POST', `/api/requests/${f.requestA1}/convert`],
 ];
 
 test('sem sessão, TODAS as rotas protegidas respondem 401 (e nada é alterado)', async () => {
@@ -527,4 +571,199 @@ test('estágio 4: validação, duplicidade e CSRF em solicitações', async () =
   await noOrigin.dispose();
   expect((await ownerA.get('/api/requests?status=invalido')).status()).toBe(400);
   expect((await ownerA.get("/api/requests?q='%20OR%201=1%20--")).status()).toBe(200);
+});
+
+test('estágio 5: org B não alcança conteúdos, pilares nem campanhas da A (404, sem alteração)', async () => {
+  const f = fx();
+  const attempts: [string, string, unknown?][] = [
+    ['GET', `/api/contents/${f.contentA1}`],
+    ['PATCH', `/api/contents/${f.contentA1}`, { title: 'Invadido' }],
+    ['DELETE', `/api/contents/${f.contentA1}`],
+    ['POST', `/api/contents/${f.contentA1}/status`, { to: 'in_production' }],
+    ['POST', `/api/contents/${f.contentA1}/duplicate`],
+    ['GET', `/api/contents/${f.contentA1}/history`],
+    ['PUT', `/api/content-pillars/${f.pillarA}`, { name: 'Invadido', color: 'red' }],
+    ['GET', `/api/clients/${f.clientA1}/campaigns`],
+    ['POST', `/api/clients/${f.clientA1}/campaigns`, { name: 'Invasora' }],
+    ['PUT', `/api/campaigns/${f.campaignA}`, { name: 'Invadida' }],
+    ['DELETE', `/api/campaigns/${f.campaignA}`],
+    ['POST', `/api/requests/${f.requestA1}/convert`],
+    [
+      'POST',
+      '/api/contents',
+      { clientId: f.clientA1, title: 'Em cliente alheio', format: 'carousel' },
+    ],
+  ];
+  for (const [method, url, data] of attempts) {
+    const res = await ownerB.fetch(url, { method, data });
+    expect(res.status(), `${method} ${url}`).toBe(404);
+  }
+  const mine = await (await ownerA.get(`/api/contents/${f.contentA1}`)).json();
+  expect(mine).toMatchObject({ title: 'Fixture conteúdo do A1', status: 'draft' });
+  const listB = (await (await ownerB.get('/api/contents')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(listB).toContain(f.contentB1);
+  expect(listB).not.toContain(f.contentA1);
+  const pillarsB = JSON.stringify(
+    (await (await ownerB.get('/api/content-pillars')).json()).pillars,
+  );
+  expect(pillarsB).not.toContain('Pilar Fixture');
+  expect(
+    JSON.stringify((await (await ownerB.get('/api/search?q=Fixture')).json()).contents),
+  ).not.toContain('do A1');
+});
+
+test('estágio 5: externo só vê conteúdo enviado ao cliente e não opera nada', async () => {
+  const f = fx();
+  const ext = await apiLogin('cliente.a1@example.test');
+  const ids = (await (await ext.get('/api/contents')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(ids).toEqual([f.contentExtA1]); // o rascunho do A1 e o conteúdo do A2 não aparecem
+  expect((await ext.get(`/api/contents/${f.contentA1}`)).status()).toBe(404);
+  expect((await ext.get(`/api/contents/${f.contentA2}`)).status()).toBe(404);
+  expect((await ext.get(`/api/contents/${f.contentExtA1}`)).status()).toBe(200);
+  expect(
+    (
+      await ext.patch(`/api/contents/${f.contentExtA1}`, { data: { title: 'Cliente editando' } })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await ext.post(`/api/contents/${f.contentExtA1}/status`, {
+        data: { to: 'cancelled', message: 'x' },
+      })
+    ).status(),
+  ).toBe(403);
+  expect((await ext.delete(`/api/contents/${f.contentExtA1}`)).status()).toBe(403);
+  expect((await ext.post(`/api/contents/${f.contentExtA1}/duplicate`)).status()).toBe(403);
+  expect((await ext.get(`/api/contents/${f.contentExtA1}/history`)).status()).toBe(403);
+  expect(
+    (
+      await ext.post('/api/contents', {
+        data: { clientId: f.clientA1, title: 'Cliente criando', format: 'carousel' },
+      })
+    ).status(),
+  ).toBe(403);
+  const found = JSON.stringify((await (await ext.get('/api/search?q=Fixture')).json()).contents);
+  expect(found).toContain('enviado ao cliente');
+  expect(found).not.toContain('do A1');
+  await ext.dispose();
+});
+
+test('estágio 5: escopo e permissões por função em conteúdos', async () => {
+  const f = fx();
+  expect((await scopedA1.get(`/api/contents/${f.contentA1}`)).status()).toBe(200);
+  expect((await scopedA1.get(`/api/contents/${f.contentA2}`)).status()).toBe(404);
+  expect(
+    (
+      await scopedA1.patch(`/api/contents/${f.contentA1}`, { data: { title: 'Sem permissão' } })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await scopedA1.post('/api/contents', {
+        data: { clientId: f.clientA1, title: 'Sem permissão', format: 'carousel' },
+      })
+    ).status(),
+  ).toBe(403);
+  const writer = await apiLogin('redator.a@example.test');
+  expect((await writer.delete(`/api/contents/${f.contentA2}`)).status()).toBe(403); // redator não exclui
+  expect(
+    (
+      await writer.post('/api/content-pillars', { data: { name: 'Sem permissão', color: 'blue' } })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await writer.post(`/api/clients/${f.clientA1}/campaigns`, { data: { name: 'Sem permissão' } })
+    ).status(),
+  ).toBe(403);
+  expect((await writer.post(`/api/requests/${f.requestA1}/convert`)).status()).toBe(403); // redator não edita solicitações
+  const created = await writer.post('/api/contents', {
+    data: { clientId: f.clientA1, title: 'Criado pelo redator', format: 'text' },
+  });
+  expect(created.status()).toBe(200);
+  await writer.dispose();
+});
+
+test('estágio 5: máquina de estados, validação, duplicação, visões e CSRF pela API', async () => {
+  const f = fx();
+  const made = await (
+    await ownerA.post('/api/contents', {
+      data: {
+        clientId: f.clientA1,
+        title: 'Conteúdo de fluxo de estados',
+        format: 'reels',
+        scheduledDate: '2031-04-02',
+      },
+    })
+  ).json();
+  const id = made.id as string;
+  for (const to of ['approved', 'scheduled', 'published', 'awaiting_client']) {
+    expect((await ownerA.post(`/api/contents/${id}/status`, { data: { to } })).status(), to).toBe(
+      409,
+    );
+  }
+  expect(
+    (await ownerA.post(`/api/contents/${id}/status`, { data: { to: 'internal_review' } })).status(),
+  ).toBe(409);
+  expect(
+    (await ownerA.post(`/api/contents/${id}/status`, { data: { to: 'in_production' } })).status(),
+  ).toBe(200);
+  expect(
+    (await ownerA.post(`/api/contents/${id}/status`, { data: { to: 'cancelled' } })).status(),
+  ).toBe(400); // sem motivo
+  const dup = await ownerA.post(`/api/contents/${id}/duplicate`);
+  expect(dup.status()).toBe(200);
+  const dupId = (await dup.json()).id as string;
+  expect(await (await ownerA.get(`/api/contents/${dupId}`)).json()).toMatchObject({
+    title: 'Conteúdo de fluxo de estados (cópia)',
+    status: 'draft',
+    scheduledDate: null,
+  });
+  const bad = await ownerA.post('/api/contents', {
+    data: { clientId: f.clientA1, title: 'ab', format: 'gif', scheduledDate: '2031-02-30' },
+  });
+  expect(bad.status()).toBe(400);
+  expect(Object.keys((await bad.json()).error.details).sort()).toEqual([
+    'format',
+    'scheduledDate',
+    'title',
+  ]);
+  expect(
+    (await ownerA.patch(`/api/contents/${id}`, { data: { campo_inexistente: 1 } })).status(),
+  ).toBe(400);
+  expect((await ownerA.get('/api/contents?view=invalida')).status()).toBe(400);
+  expect((await ownerA.get('/api/contents?mes=2031-13')).status()).toBe(400);
+  expect((await ownerA.get("/api/contents?q='%20OR%201=1%20--")).status()).toBe(200);
+  const month = (
+    await (await ownerA.get('/api/contents?view=calendario&mes=2031-03')).json()
+  ).items.map((i: { id: string }) => i.id);
+  expect(month).toEqual(expect.arrayContaining([f.contentA1, f.contentA2]));
+  expect(month).not.toContain(f.contentB1);
+  const all = (await (await ownerA.get('/api/contents?status=open')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(all).toEqual(expect.arrayContaining([f.contentA1, f.contentA2])); // as mesmas linhas aparecem na visão geral
+  const week = (
+    await (await ownerA.get('/api/contents?view=semana&dia=2031-03-12')).json()
+  ).items.map((i: { id: string }) => i.id);
+  expect(week).toContain(f.contentA1);
+  expect(week).toContain(f.contentA2); // 14/03 está na mesma semana (09 a 15/03)
+  expect(week).not.toContain(f.contentExtA1); // 20/03 está fora
+  const noOrigin = await request.newContext({ baseURL: BASE });
+  await noOrigin.post('/api/auth/login', {
+    data: { email: 'dona.a@example.test', password: 'senha-de-teste-e2e-123' },
+    headers: { Origin: BASE },
+  });
+  expect(
+    (
+      await noOrigin.post('/api/contents', {
+        data: { clientId: f.clientA1, title: 'Sem origem', format: 'carousel' },
+      })
+    ).status(),
+  ).toBe(403);
+  await noOrigin.dispose();
 });

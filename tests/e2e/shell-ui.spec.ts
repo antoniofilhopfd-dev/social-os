@@ -114,7 +114,7 @@ test.describe('busca global', () => {
     await page.keyboard.press('/');
     const dialog = page.getByRole('dialog', { name: 'Busca' });
     await expect(dialog).toBeVisible();
-    await page.getByLabel('Buscar clientes, solicitações e pessoas').fill('Cliente A');
+    await page.getByLabel('Buscar clientes, conteúdos, solicitações e pessoas').fill('Cliente A');
     await expect(dialog.getByRole('link', { name: 'Cliente A1', exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Cliente A2', exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Cliente B1', exact: true })).toHaveCount(0);
@@ -131,7 +131,7 @@ test.describe('busca global', () => {
     await uiLogin(page, OWNER);
     await page.getByRole('button', { name: /Buscar/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Busca' });
-    const input = page.getByLabel('Buscar clientes, solicitações e pessoas');
+    const input = page.getByLabel('Buscar clientes, conteúdos, solicitações e pessoas');
     await input.fill('a');
     await expect(dialog.getByText('Buscando')).toHaveCount(0);
     await input.fill('redator.a');
@@ -158,7 +158,7 @@ test.describe('busca global', () => {
     await page.waitForLoadState('networkidle'); // espera a hidratação (o atalho depende dela)
     await page.keyboard.press('/');
     const dialog = page.getByRole('dialog', { name: 'Busca' });
-    await page.getByLabel('Buscar clientes, solicitações e pessoas').fill('Cliente A');
+    await page.getByLabel('Buscar clientes, conteúdos, solicitações e pessoas').fill('Cliente A');
     await expect(dialog.getByRole('link', { name: 'Cliente A1', exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Cliente A2', exact: true })).toHaveCount(0);
     await expect(dialog.getByText('Pessoas', { exact: true })).toHaveCount(0);
@@ -194,11 +194,21 @@ test.describe('notificações', () => {
     await page.goto('/notificacoes/preferencias');
     const box = page.getByLabel(/Convite aceito/);
     await expect(box).toBeChecked();
-    await box.uncheck();
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes('/api/notifications/preferences') && r.request().method() === 'PUT',
+      ),
+      box.uncheck(),
+    ]);
     await expect(page.getByRole('status').filter({ hasText: 'Preferência salva.' })).toBeAttached();
     await page.reload();
     await expect(page.getByLabel(/Convite aceito/)).not.toBeChecked();
-    await page.getByLabel(/Convite aceito/).check();
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes('/api/notifications/preferences') && r.request().method() === 'PUT',
+      ),
+      page.getByLabel(/Convite aceito/).check(),
+    ]);
     await page.reload();
     await expect(page.getByLabel(/Convite aceito/)).toBeChecked();
   });
@@ -239,7 +249,7 @@ test.describe('acessibilidade dos overlays', () => {
     await uiLogin(page, OWNER);
     await page.waitForLoadState('networkidle'); // espera a hidratação (o atalho depende dela)
     await page.keyboard.press('/');
-    await page.getByLabel('Buscar clientes, solicitações e pessoas').fill('Cliente');
+    await page.getByLabel('Buscar clientes, conteúdos, solicitações e pessoas').fill('Cliente');
     await expect(
       page
         .getByRole('dialog', { name: 'Busca' })

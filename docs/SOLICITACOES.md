@@ -29,4 +29,4 @@
 - **Numeração** sequencial por organização (#1, #2…), sem repetição sob concorrência.
 - **Visibilidade:** externos só veem e criam solicitações do próprio cliente; **notas internas** e a triagem são invisíveis para eles. Resposta do cliente a um pedido de informações devolve a solicitação à triagem.
 - **Notificações:** nova solicitação (para quem pode atribuir), atribuição, pedido de informações, informações recebidas e mudança de situação para o solicitante.
-- **Conversão em projeto, tarefa ou conteúdo:** os campos de destino existem no banco, mas **não há botão** até os módulos existirem (Etapas 05 e 07).
+- **Conversão:** solicitação **aceita** converte em **conteúdo** (Etapa 05; ver [CONTEUDOS.md](CONTEUDOS.md)). Conversão em projeto ou tarefa depende da Etapa 07 e ainda não tem botão.

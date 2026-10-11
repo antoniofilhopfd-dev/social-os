@@ -171,6 +171,7 @@ describe('busca global', () => {
       clients: [],
       people: [],
       requests: [],
+      contents: [],
     });
   });
 

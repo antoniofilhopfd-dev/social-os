@@ -683,3 +683,225 @@ kbd {
     padding: 28px 28px 64px;
   }
 }
+
+/* Conteúdos: calendário, semana, agenda e Kanban */
+.cal {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+}
+.cal caption {
+  text-align: left;
+  font-weight: 700;
+  color: var(--color-navy);
+  padding: 8px 0;
+  font-size: 1.125rem;
+}
+.cal th {
+  background: #eef1f9;
+  color: var(--color-navy);
+  font-size: 0.8125rem;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  text-transform: uppercase;
+}
+.cal td {
+  vertical-align: top;
+  border: 1px solid var(--color-border);
+  height: 112px;
+  padding: 4px;
+  position: relative;
+}
+.cal td.out {
+  background: #f7f8fc;
+}
+.cal td.today {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.day-head .dow {
+  display: none;
+}
+.day-add {
+  text-decoration: none;
+  font-weight: 700;
+  min-width: 24px;
+  min-height: 24px;
+  text-align: center;
+  border-radius: 4px;
+}
+.day-add:hover {
+  background: #eef1f9;
+}
+.cal ul,
+.week-col ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.chip {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border-left: 4px solid var(--color-primary);
+  background: #e8ecf8;
+  color: var(--color-navy);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip:hover,
+.chip:focus-visible {
+  background: #d9e0f5;
+}
+.chip small {
+  display: block;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.chip.late {
+  border-left-color: var(--color-danger);
+  background: #fdeceb;
+}
+.chip.soon {
+  border-left-color: var(--color-warning);
+  background: #fdf0d9;
+}
+.pillar-blue {
+  border-left-color: #243b80;
+}
+.pillar-violet {
+  border-left-color: #7557d9;
+}
+.pillar-green {
+  border-left-color: #0f6b3e;
+}
+.pillar-orange {
+  border-left-color: #b45309;
+}
+.pillar-red {
+  border-left-color: #b42318;
+}
+.pillar-gray {
+  border-left-color: #667085;
+}
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.week-col {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 8px;
+  min-height: 160px;
+}
+.week-col h3 {
+  font-size: 0.875rem;
+  margin: 0 0 4px;
+  text-transform: capitalize;
+}
+.week-col.today {
+  outline: 2px solid var(--color-accent);
+}
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(250px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.kcol {
+  background: #eef1f9;
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+}
+.kcol h3 {
+  font-size: 0.875rem;
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+}
+.kcard {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kcard a {
+  font-weight: 600;
+  text-decoration: none;
+}
+.agenda-day {
+  margin-bottom: 12px;
+}
+.agenda-day h3 {
+  text-transform: capitalize;
+}
+.cal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+@media (max-width: 899px) {
+  .week {
+    grid-template-columns: 1fr;
+  }
+  .cal,
+  .cal tbody,
+  .cal tr,
+  .cal td,
+  .cal caption {
+    display: block;
+    width: 100%;
+  }
+  .cal thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .cal td {
+    height: auto;
+    min-height: 0;
+  }
+  .cal td.empty {
+    display: none;
+  }
+  .day-head .dow {
+    display: inline;
+    margin-left: 6px;
+    text-transform: uppercase;
+  }
+}
+.kanban,
+.cal,
+.week {
+  position: relative;
+}

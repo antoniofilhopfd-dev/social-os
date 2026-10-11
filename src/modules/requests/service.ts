@@ -280,6 +280,8 @@ export async function getRequest(db: Db, ctx: Ctx, id: string, now = new Date())
     firstResponseDueAt: r.firstResponseDueAt,
     firstResponseAt: r.firstResponseAt,
     possibleDuplicateOf: r.possibleDuplicateOf,
+    convertedToType: r.convertedToType,
+    convertedToId: r.convertedToId,
     createdAt: r.createdAt,
     closedAt: r.closedAt,
     sla: slaState(r, now),

@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { api } from '@/ui/api-client';
@@ -58,6 +59,8 @@ interface Data {
   missing: string[];
   permissions: { edit: boolean; assign: boolean; comment: boolean };
   events: EventRow[];
+  convertedToType: string | null;
+  convertedToId: string | null;
 }
 
 const fmtDate = (d: string | null) => (d ? d.slice(0, 10).split('-').reverse().join('/') : '—');
@@ -91,7 +94,9 @@ export function RequestDetail({
   types,
   clients,
   internal,
+  canConvert,
 }: {
+  canConvert: boolean;
   data: Data;
   assignees: { id: string; name: string }[];
   types: { id: string; name: string; requiredFields: string[] }[];
@@ -136,6 +141,11 @@ export function RequestDetail({
       estimatedDue: (f.get('due') as string) || null,
     });
     if (r.ok) refresh();
+    else fail(r);
+  }
+  async function convert() {
+    const r = await api<{ id: string }>('POST', `/api/requests/${data.id}/convert`);
+    if (r.ok) router.push(`/conteudos/${r.data!.id}`);
     else fail(r);
   }
   async function comment(e: React.FormEvent<HTMLFormElement>) {
@@ -263,10 +273,24 @@ export function RequestDetail({
             Entrega estimada {fmtDate(data.estimatedDue)}
           </dd>
         </dl>
-        <p className="field-hint">
-          Conversão em projeto, tarefa ou conteúdo: disponível nas etapas dos respectivos módulos
-          (05 e 07).
-        </p>
+        {data.convertedToId ? (
+          <p>
+            Convertida em <Link href={`/conteudos/${data.convertedToId}`}>conteúdo</Link>.
+          </p>
+        ) : canConvert && data.status === 'accepted' ? (
+          <div className="actions">
+            <Button onClick={convert}>Converter em conteúdo</Button>
+            <span className="field-hint">
+              Cria um rascunho com os dados desta solicitação (cliente, marca, título, briefing,
+              data desejada e responsável).
+            </span>
+          </div>
+        ) : (
+          <p className="field-hint">
+            Conversão em conteúdo: disponível quando a solicitação estiver aceita. Conversão em
+            projeto ou tarefa chega na Etapa 07.
+          </p>
+        )}
       </section>
 
       {data.permissions.edit && (

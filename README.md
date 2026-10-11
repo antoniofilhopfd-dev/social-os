@@ -3,10 +3,10 @@
 Plataforma de gestão de operações de social media **orgânico** para agências com múltiplos clientes.
 Projeto independente do AdsPilot (sem tráfego pago, sem dados ou código compartilhados).
 
-> **Estado atual: Etapa 04/13 (clientes, marcas e solicitações).** Autenticação, multiempresa,
-> permissões, auditoria, layout responsivo, dashboard, busca, notificações, cadastro completo de
-> clientes/marcas/perfis sociais e fluxo de solicitações (recebimento, triagem e classificação).
-> Conteúdos e calendário começam na Etapa 05.
+> **Estado atual: Etapa 05/13 (conteúdos e calendário editorial).** Autenticação, multiempresa,
+> permissões, auditoria, layout responsivo, dashboard, busca, notificações, clientes/marcas/perfis,
+> solicitações e conteúdos com calendário, semana, agenda, lista e Kanban.
+> Editor e biblioteca começam na Etapa 06.
 
 ## Requisitos
 
@@ -44,6 +44,7 @@ npm run dev                 # http://localhost:3000
 - [docs/PERMISSOES.md](docs/PERMISSOES.md)
 - [docs/EXTENSAO-MODULOS.md](docs/EXTENSAO-MODULOS.md)
 - [docs/SOLICITACOES.md](docs/SOLICITACOES.md)
+- [docs/CONTEUDOS.md](docs/CONTEUDOS.md)
 - [docs/CONVENCOES.md](docs/CONVENCOES.md)
 - [docs/HOSPEDAGEM.md](docs/HOSPEDAGEM.md)
 - [docs/BACKUP.md](docs/BACKUP.md)

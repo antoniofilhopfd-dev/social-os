@@ -23,9 +23,12 @@ export function buildNav(ctx: Ctx): NavGroup[] {
       ],
     },
   ];
-  if (ctx.grants.some((g) => g.permissions.has('requests:view'))) {
-    groups.push({ label: 'Operação', items: [{ href: '/solicitacoes', label: 'Solicitações' }] });
-  }
+  const operation: NavItem[] = [];
+  if (ctx.grants.some((g) => g.permissions.has('requests:view')))
+    operation.push({ href: '/solicitacoes', label: 'Solicitações' });
+  if (ctx.grants.some((g) => g.permissions.has('contents:view')))
+    operation.push({ href: '/conteudos', label: 'Conteúdos' });
+  if (operation.length) groups.push({ label: 'Operação', items: operation });
   if (ctx.grants.some((g) => g.permissions.has('clients:view'))) {
     groups.push({ label: 'Cadastros', items: [{ href: '/clientes', label: 'Clientes' }] });
   }

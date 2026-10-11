@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
-import { memberships, notifications, users } from '@/db/schema';
+import { contents, memberships, notifications, users } from '@/db/schema';
 import { resetDatabase, world } from '../helpers/db';
 import { PASSWORD } from './constants';
 import { systemRoleId } from '@/core/permissions/seed';
@@ -11,6 +11,8 @@ import { createInvitation } from '@/modules/team/service';
 import { notify } from '@/modules/notifications/service';
 import { createBrand, createContact, createDate, createProfile } from '@/modules/clients/children';
 import { createRequest, listRequestTypes } from '@/modules/requests/service';
+import { createCampaign } from '@/modules/contents/campaigns';
+import { createContent, savePillar } from '@/modules/contents/service';
 
 export default async function globalSetup() {
   await resetDatabase();
@@ -111,6 +113,54 @@ export default async function globalSetup() {
         desiredDate: '2031-01-01',
       })
     ).id;
+    // Estágio 5: pilar, campanha e conteúdos fixos em março de 2031 (calendário previsível nos testes)
+    const pillarA = (
+      await savePillar(w.db, ownerA.ctx, null, { name: 'Pilar Fixture', color: 'violet' })
+    ).id;
+    const campaignA = (
+      await createCampaign(w.db, ownerA.ctx, clientA1, { name: 'Campanha Fixture' })
+    ).id;
+    const contentA1 = (
+      await createContent(w.db, ownerA.ctx, {
+        clientId: clientA1,
+        title: 'Fixture conteúdo do A1',
+        format: 'carousel',
+        brandId: brandA,
+        socialProfileId: profileA,
+        pillarId: pillarA,
+        campaignId: campaignA,
+        scheduledDate: '2031-03-12',
+        scheduledTime: '10:00',
+      })
+    ).id;
+    const contentA2 = (
+      await createContent(w.db, ownerA.ctx, {
+        clientId: clientA2,
+        title: 'Fixture conteúdo do A2',
+        format: 'reels',
+        scheduledDate: '2031-03-14',
+      })
+    ).id;
+    const contentExtA1 = (
+      await createContent(w.db, ownerA.ctx, {
+        clientId: clientA1,
+        title: 'Fixture conteúdo enviado ao cliente',
+        format: 'static_post',
+        scheduledDate: '2031-03-20',
+      })
+    ).id;
+    await w.db
+      .update(contents)
+      .set({ status: 'awaiting_client' })
+      .where(eq(contents.id, contentExtA1));
+    const contentB1 = (
+      await createContent(w.db, ownerB.ctx, {
+        clientId: clientB1,
+        title: 'Fixture conteúdo da B',
+        format: 'text',
+        scheduledDate: '2031-03-12',
+      })
+    ).id;
     const roleA = (
       await createRole(w.db, ownerA.ctx, {
         name: 'Função Personalizada A',
@@ -142,6 +192,12 @@ export default async function globalSetup() {
         writerAUserId: writerA.userId,
         ownerAUserId: ownerA.userId,
         notificationA: notifA!.id,
+        pillarA,
+        campaignA,
+        contentA1,
+        contentA2,
+        contentExtA1,
+        contentB1,
         brandA,
         profileA,
         contactA,

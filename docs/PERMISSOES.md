@@ -1,6 +1,6 @@
 # Permissões e funções
 
-Permissões têm o formato `módulo:ação` e vivem em `src/core/permissions/catalog.ts` (fonte única; o banco é sincronizado por `seedPermissionsAndRoles`). São 51 permissões em 13 módulos. Até a Etapa 04 o backend **aplica** as de `clients`, `requests`, `team`, `roles`, `audit` e `settings` (tipos de solicitação); as demais já existem no catálogo e nas funções, para serem aplicadas nos módulos das próximas etapas.
+Permissões têm o formato `módulo:ação` e vivem em `src/core/permissions/catalog.ts` (fonte única; o banco é sincronizado por `seedPermissionsAndRoles`). São 51 permissões em 13 módulos. Até a Etapa 04 o backend **aplica** as de `clients`, `requests`, `contents` (exceto approve/publish/export), `team`, `roles`, `audit` e `settings` (tipos de solicitação); as demais já existem no catálogo e nas funções, para serem aplicadas nos módulos das próximas etapas.
 
 **Escopo:** cada vínculo (membership) vale para a **organização inteira** ou para **um cliente**. Telas administrativas (equipe, funções, auditoria) exigem escopo de organização.
 

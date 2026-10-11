@@ -42,6 +42,9 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
         types={types}
         clients={clients.map((c) => ({ id: c.id, name: c.name }))}
         internal={ctx.userKind === 'internal'}
+        canConvert={
+          ctx.userKind === 'internal' && canEdit && can(ctx, 'contents:create', data.clientId)
+        }
       />
     </>
   );

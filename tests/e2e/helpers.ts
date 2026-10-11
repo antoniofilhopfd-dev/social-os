@@ -27,6 +27,12 @@ export interface Fixtures {
   contactA: string;
   dateA: string;
   typeA: string;
+  pillarA: string;
+  campaignA: string;
+  contentA1: string;
+  contentA2: string;
+  contentExtA1: string;
+  contentB1: string;
   requestA1: string;
   requestA2: string;
   requestExtA1: string;
