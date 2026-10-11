@@ -48,3 +48,5 @@ npm run dev                 # http://localhost:3000
 - [docs/CONVENCOES.md](docs/CONVENCOES.md)
 - [docs/HOSPEDAGEM.md](docs/HOSPEDAGEM.md)
 - [docs/BACKUP.md](docs/BACKUP.md)
+
+- Editor de conteúdo e biblioteca de mídia: ver `docs/EDITOR-BIBLIOTECA.md` (`npm run assets:purge`, `MAX_UPLOAD_MB`).

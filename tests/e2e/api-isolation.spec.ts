@@ -94,6 +94,24 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['PUT', `/api/campaigns/${f.campaignA}`],
   ['DELETE', `/api/campaigns/${f.campaignA}`],
   ['POST', `/api/requests/${f.requestA1}/convert`],
+  // Etapa 06
+  ['GET', `/api/contents/${f.contentA1}/editor`],
+  ['PUT', `/api/contents/${f.contentA1}/editor/draft`],
+  ['GET', `/api/contents/${f.contentA1}/editor/versions`],
+  ['POST', `/api/contents/${f.contentA1}/editor/versions`],
+  ['GET', `/api/contents/${f.contentA1}/editor/versions/1`],
+  ['POST', `/api/contents/${f.contentA1}/editor/versions/1/restore`],
+  ['GET', `/api/contents/${f.contentA1}/editor/compare?a=1&b=2`],
+  ['GET', `/api/contents/${f.contentA1}/assets`],
+  ['POST', `/api/contents/${f.contentA1}/assets`],
+  ['GET', '/api/editor-blocks'],
+  ['POST', '/api/editor-blocks'],
+  ['GET', '/api/content-templates'],
+  ['POST', '/api/content-templates'],
+  ['GET', '/api/assets'],
+  ['POST', '/api/assets'],
+  ['GET', `/api/asset-folders?clientId=${f.clientA1}`],
+  ['POST', '/api/asset-folders'],
 ];
 
 test('sem sessão, TODAS as rotas protegidas respondem 401 (e nada é alterado)', async () => {

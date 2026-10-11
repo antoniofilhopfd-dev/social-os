@@ -600,7 +600,7 @@ export async function createContent(db: Db, ctx: Ctx, input: CreateContentInput)
 }
 
 // ------------------------------------------------------------------- editar
-async function loadForWrite(db: Db, ctx: Ctx, id: string, perm: string) {
+export async function loadForWrite(db: Db, ctx: Ctx, id: string, perm: string) {
   const [c] = await db
     .select()
     .from(contents)

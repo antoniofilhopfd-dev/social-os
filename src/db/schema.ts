@@ -24,6 +24,7 @@ export const organizations = mysqlTable('organizations', {
   name: varchar('name', { length: 190 }).notNull(),
   slug: varchar('slug', { length: 80 }).notNull(),
   status: mysqlEnum('status', ['active', 'suspended']).notNull().default('active'),
+  storageLimitMb: int('storage_limit_mb', { unsigned: true }).notNull().default(5120),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
@@ -422,3 +423,132 @@ export const contents = mysqlTable('contents', {
   updatedAt: ts('updated_at').notNull().defaultNow(),
   deletedAt: ts('deleted_at'),
 });
+
+export interface EditorBody {
+  caption: string;
+  hook: string;
+  script: string;
+  cta: string;
+  hashtags: string;
+  coverText: string;
+  altText: string;
+  productionNotes: string;
+  publishNotes: string;
+  references: string;
+  slides: { title: string; text: string }[];
+  checklist: string[];
+}
+
+export const contentDrafts = mysqlTable('content_drafts', {
+  contentId: id('content_id').primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  body: json('body').$type<EditorBody>().notNull(),
+  revision: int('revision', { unsigned: true }).notNull().default(1),
+  updatedBy: id('updated_by'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const contentVersions = mysqlTable('content_versions', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  contentId: id('content_id').notNull(),
+  versionNumber: int('version_number', { unsigned: true }).notNull(),
+  body: json('body').$type<EditorBody>().notNull(),
+  note: varchar('note', { length: 500 }),
+  source: mysqlEnum('source', ['human', 'ai_assisted']).notNull().default('human'),
+  restoredFrom: id('restored_from'),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const textBlocks = mysqlTable('text_blocks', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id'),
+  name: varchar('name', { length: 120 }).notNull(),
+  kind: mysqlEnum('kind', ['cta', 'hashtags', 'disclaimer', 'signature', 'other'])
+    .notNull()
+    .default('other'),
+  text: text('text').notNull(),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const contentTemplates = mysqlTable('content_templates', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id'),
+  name: varchar('name', { length: 120 }).notNull(),
+  format: varchar('format', { length: 32 }),
+  body: json('body').$type<EditorBody>().notNull(),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const assetFolders = mysqlTable('asset_folders', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  brandId: id('brand_id'),
+  parentId: id('parent_id'),
+  name: varchar('name', { length: 120 }).notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const assets = mysqlTable('assets', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  brandId: id('brand_id'),
+  folderId: id('folder_id'),
+  rootAssetId: id('root_asset_id').notNull(),
+  versionNumber: int('version_number', { unsigned: true }).notNull().default(1),
+  isLatest: tinyint('is_latest').notNull().default(1),
+  displayName: varchar('display_name', { length: 190 }).notNull(),
+  originalName: varchar('original_name', { length: 190 }).notNull(),
+  mime: varchar('mime', { length: 100 }).notNull(),
+  kind: mysqlEnum('kind', ['image', 'video', 'document', 'other']).notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'number', unsigned: true }).notNull(),
+  sha256: char('sha256', { length: 64 }).notNull(),
+  storageKey: varchar('storage_key', { length: 255 }).notNull(),
+  description: varchar('description', { length: 1000 }),
+  credits: varchar('credits', { length: 255 }),
+  origin: varchar('origin', { length: 255 }),
+  uploadedBy: id('uploaded_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const assetTags = mysqlTable(
+  'asset_tags',
+  { assetId: id('asset_id').notNull(), tag: varchar('tag', { length: 40 }).notNull() },
+  (t) => [primaryKey({ columns: [t.assetId, t.tag] })],
+);
+
+export const assetFavorites = mysqlTable(
+  'asset_favorites',
+  {
+    assetId: id('asset_id').notNull(),
+    userId: id('user_id').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.assetId, t.userId] })],
+);
+
+export const contentAssets = mysqlTable(
+  'content_assets',
+  {
+    contentId: id('content_id').notNull(),
+    assetId: id('asset_id').notNull(),
+    role: mysqlEnum('role', ['attachment', 'cover', 'reference']).notNull().default('attachment'),
+    createdBy: id('created_by'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.contentId, t.assetId] })],
+);

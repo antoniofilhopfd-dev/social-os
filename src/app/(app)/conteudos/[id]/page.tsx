@@ -16,6 +16,9 @@ import {
 import { NETWORK_LABELS } from '@/modules/requests/labels';
 import { PRIORITY_LABELS } from '@/modules/requests/rules';
 import { Alert, Badge } from '@/ui/components';
+import { getEditor, listBlocks } from '@/modules/editor/service';
+import { listContentAssets } from '@/modules/library/service';
+import { EditorPanel } from './editor-panel';
 import { ContentForm } from '../content-form';
 import { ContentActions } from './content-actions';
 import { HistoryList } from './history-list';
@@ -45,7 +48,12 @@ export default async function ContentPage({
   }
   const editable = c.permissions.edit;
   const internal = ctx.userKind === 'internal';
-  const tab = aba === 'historico' && editable ? 'historico' : 'dados';
+  const tab =
+    editable && internal && aba === 'editor'
+      ? 'editor'
+      : aba === 'historico' && editable
+        ? 'historico'
+        : 'dados';
   const [clients, pillars, assignees] = editable
     ? await Promise.all([
         listClients(db, ctx),
@@ -54,6 +62,9 @@ export default async function ContentPage({
       ])
     : [[], [], []];
   const history = tab === 'historico' ? await listContentHistory(db, ctx, id) : [];
+  const editor = tab === 'editor' ? await getEditor(db, ctx, id) : null;
+  const blocks = editor ? await listBlocks(db, ctx) : [];
+  const linked = editor ? await listContentAssets(db, ctx, id) : [];
   const targets = MANUAL_TRANSITIONS[c.status] ?? [];
 
   return (
@@ -106,6 +117,15 @@ export default async function ContentPage({
           >
             Dados
           </Link>
+          {internal && (
+            <Link
+              href={`/conteudos/${id}?aba=editor`}
+              className={`btn btn-sm ${tab === 'editor' ? 'btn-primary' : 'btn-secondary'}`}
+              aria-current={tab === 'editor' ? 'page' : undefined}
+            >
+              Editor
+            </Link>
+          )}
           <Link
             href={`/conteudos/${id}?aba=historico`}
             className={`btn btn-sm ${tab === 'historico' ? 'btn-primary' : 'btn-secondary'}`}
@@ -116,7 +136,28 @@ export default async function ContentPage({
         </nav>
       )}
 
-      {tab === 'historico' ? (
+      {tab === 'editor' && editor ? (
+        <EditorPanel
+          contentId={id}
+          clientId={c.clientId}
+          format={c.format}
+          network={editor.network}
+          canEdit={editor.canEdit}
+          initialBody={editor.draft.body}
+          initialRevision={editor.draft.revision}
+          updatedByName={editor.draft.updatedByName}
+          versions={editor.versions.map((v) => ({
+            id: v.id,
+            number: v.number,
+            note: v.note,
+            source: v.source,
+            createdAt: v.createdAt.toISOString(),
+            createdByName: v.createdByName,
+          }))}
+          blocks={blocks.map((b) => ({ id: b.id, name: b.name, kind: b.kind, text: b.text }))}
+          linked={linked}
+        />
+      ) : tab === 'historico' ? (
         <HistoryList
           items={history.map((h) => ({
             id: h.id,

@@ -20,7 +20,8 @@
     "db:rollback": "tsx scripts/migrate.ts down",
     "db:status": "tsx scripts/migrate.ts status",
     "bootstrap": "tsx scripts/bootstrap.ts",
-    "screenshots:e2e": "SCREENSHOTS=1 playwright test tests/e2e/screenshots.spec.ts"
+    "assets:purge": "tsx scripts/assets-purge.ts",
+    "screenshots:e2e": "SCREENSHOTS=1 playwright test tests/e2e/screenshots.spec.ts tests/e2e/screenshots-06.spec.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

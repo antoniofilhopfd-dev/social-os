@@ -36,6 +36,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Arquivos da biblioteca definem a própria CSP restritiva (sandbox) na rota; não sobrescrever.
+  if (/^\/api\/assets\/[^/]+\/file$/.test(pathname)) return NextResponse.next();
+
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const policy = csp(nonce);
   const headers = new Headers(request.headers);
