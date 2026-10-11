@@ -172,6 +172,7 @@ describe('busca global', () => {
       people: [],
       requests: [],
       contents: [],
+      tasks: [],
     });
   });
 

@@ -13,6 +13,7 @@ import { createBrand, createContact, createDate, createProfile } from '@/modules
 import { createRequest, listRequestTypes } from '@/modules/requests/service';
 import { createCampaign } from '@/modules/contents/campaigns';
 import { createContent, savePillar } from '@/modules/contents/service';
+import { createProject, createTask } from '@/modules/tasks/service';
 
 export default async function globalSetup() {
   await resetDatabase();
@@ -120,6 +121,22 @@ export default async function globalSetup() {
     const campaignA = (
       await createCampaign(w.db, ownerA.ctx, clientA1, { name: 'Campanha Fixture' })
     ).id;
+    const projectA = (
+      await createProject(w.db, ownerA.ctx, {
+        clientId: clientA1,
+        name: 'Projeto Fixture',
+        status: 'active',
+      })
+    ).id;
+    const taskA = (
+      await createTask(w.db, ownerA.ctx, {
+        projectId: projectA,
+        title: 'Tarefa Fixture do A1',
+        assigneeUserId: ownerA.userId,
+        dueDate: '2031-03-10',
+      })
+    ).id;
+    const taskB = (await createTask(w.db, ownerB.ctx, { title: 'Tarefa Fixture da B' })).id;
     const contentA1 = (
       await createContent(w.db, ownerA.ctx, {
         clientId: clientA1,
@@ -195,6 +212,9 @@ export default async function globalSetup() {
         pillarA,
         campaignA,
         contentA1,
+        projectA,
+        taskA,
+        taskB,
         contentA2,
         contentExtA1,
         contentB1,

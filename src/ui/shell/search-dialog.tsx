@@ -7,6 +7,7 @@ interface Results {
   clients: { id: string; name: string; href: string }[];
   requests: { id: string; label: string; href: string }[];
   contents: { id: string; label: string; href: string }[];
+  tasks: { id: string; label: string; href: string }[];
   people: { userId: string; name: string; email: string; href: string }[];
 }
 
@@ -76,7 +77,8 @@ export function SearchDialog() {
     results.clients.length === 0 &&
     results.people.length === 0 &&
     results.requests.length === 0 &&
-    results.contents.length === 0;
+    results.contents.length === 0 &&
+    results.tasks.length === 0;
 
   return (
     <>
@@ -137,6 +139,20 @@ export function SearchDialog() {
                     <li key={c.id}>
                       <Link href={c.href} onClick={close}>
                         {c.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {results.tasks.length > 0 && (
+              <>
+                <p className="search-group">Tarefas</p>
+                <ul className="search-results">
+                  {results.tasks.map((t) => (
+                    <li key={t.id}>
+                      <Link href={t.href} onClick={close}>
+                        {t.label}
                       </Link>
                     </li>
                   ))}

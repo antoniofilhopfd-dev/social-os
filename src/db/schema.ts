@@ -552,3 +552,84 @@ export const contentAssets = mysqlTable(
   },
   (t) => [primaryKey({ columns: [t.contentId, t.assetId] })],
 );
+
+// ------------------------------------------------------------ projetos e tarefas
+export const PROJECT_STATUSES = [
+  'planning',
+  'active',
+  'on_hold',
+  'completed',
+  'cancelled',
+] as const;
+export const TASK_STATUSES = [
+  'todo',
+  'in_progress',
+  'blocked',
+  'in_review',
+  'done',
+  'cancelled',
+] as const;
+
+export const projects = mysqlTable('projects', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  name: varchar('name', { length: 190 }).notNull(),
+  description: text('description'),
+  status: mysqlEnum('status', PROJECT_STATUSES).notNull().default('planning'),
+  startDate: date('start_date', { mode: 'string' }),
+  dueDate: date('due_date', { mode: 'string' }),
+  ownerUserId: id('owner_user_id'),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const tasks = mysqlTable('tasks', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id'),
+  projectId: id('project_id'),
+  contentId: id('content_id'),
+  title: varchar('title', { length: 190 }).notNull(),
+  description: text('description'),
+  status: mysqlEnum('status', TASK_STATUSES).notNull().default('todo'),
+  priority: mysqlEnum('priority', ['low', 'normal', 'high', 'urgent']).notNull().default('normal'),
+  dueDate: date('due_date', { mode: 'string' }),
+  assigneeUserId: id('assignee_user_id'),
+  blockedReason: varchar('blocked_reason', { length: 500 }),
+  completedAt: ts('completed_at'),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const taskChecklistItems = mysqlTable('task_checklist_items', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  taskId: id('task_id').notNull(),
+  text: varchar('text', { length: 300 }).notNull(),
+  done: tinyint('done').notNull().default(0),
+  position: int('position', { unsigned: true }).notNull().default(0),
+});
+
+export const taskComments = mysqlTable('task_comments', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  taskId: id('task_id').notNull(),
+  authorId: id('author_id'),
+  body: text('body').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const taskEvents = mysqlTable('task_events', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  taskId: id('task_id').notNull(),
+  actorUserId: id('actor_user_id'),
+  kind: varchar('kind', { length: 40 }).notNull(),
+  metadata: json('metadata').$type<Record<string, unknown>>(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});

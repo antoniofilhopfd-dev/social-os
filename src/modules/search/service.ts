@@ -4,6 +4,7 @@ import { memberships, users } from '@/db/schema';
 import { canOrgWide, type Ctx } from '@/core/auth/context';
 import { listClients, likePattern } from '@/modules/clients/service';
 import { listContents } from '@/modules/contents/service';
+import { listTasks } from '@/modules/tasks/service';
 import { listRequests } from '@/modules/requests/service';
 
 export const SEARCH_MIN_LENGTH = 2;
@@ -13,6 +14,7 @@ export interface SearchResults {
   clients: { id: string; name: string; href: string }[];
   requests: { id: string; label: string; href: string }[];
   contents: { id: string; label: string; href: string }[];
+  tasks: { id: string; label: string; href: string }[];
   people: { userId: string; name: string; email: string; href: string }[];
 }
 
@@ -22,7 +24,8 @@ export interface SearchResults {
  */
 export async function searchAll(db: Db, ctx: Ctx, rawQuery: string): Promise<SearchResults> {
   const q = rawQuery.trim().slice(0, 80);
-  if (q.length < SEARCH_MIN_LENGTH) return { clients: [], people: [], requests: [], contents: [] };
+  if (q.length < SEARCH_MIN_LENGTH)
+    return { clients: [], people: [], requests: [], contents: [], tasks: [] };
 
   const clientRows = ctx.grants.some((g) => g.permissions.has('clients:view'))
     ? await listClients(db, ctx, { q, limit: LIMIT })
@@ -35,6 +38,11 @@ export async function searchAll(db: Db, ctx: Ctx, rawQuery: string): Promise<Sea
   const contentRows = ctx.grants.some((g) => g.permissions.has('contents:view'))
     ? (await listContents(db, ctx, { q, limit: LIMIT })).items
     : [];
+
+  const taskRows =
+    ctx.userKind === 'internal' && ctx.grants.some((g) => g.permissions.has('tasks:view'))
+      ? (await listTasks(db, ctx, { q, limit: LIMIT })).items
+      : [];
 
   let people: SearchResults['people'] = [];
   if (canOrgWide(ctx, 'team:view')) {
@@ -69,6 +77,7 @@ export async function searchAll(db: Db, ctx: Ctx, rawQuery: string): Promise<Sea
       label: `#${c.number} · ${c.title}`,
       href: `/conteudos/${c.id}`,
     })),
+    tasks: taskRows.map((t) => ({ id: t.id, label: t.title, href: `/tarefas/${t.id}` })),
     people,
   };
 }

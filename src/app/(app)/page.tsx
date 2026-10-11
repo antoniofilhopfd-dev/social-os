@@ -171,8 +171,8 @@ export default async function HomePage({
       )}
 
       <p className="muted">
-        Conteúdos, tarefas, aprovações e publicações aparecerão aqui quando esses módulos forem
-        liberados (Etapas 05 a 09). Hoje o painel mostra apenas dados que já existem.
+        Aprovações e publicações aparecerão aqui quando esses módulos forem liberados. O painel
+        mostra apenas dados reais que já existem.
       </p>
     </>
   );

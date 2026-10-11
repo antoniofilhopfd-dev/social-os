@@ -112,6 +112,21 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['POST', '/api/assets'],
   ['GET', `/api/asset-folders?clientId=${f.clientA1}`],
   ['POST', '/api/asset-folders'],
+  // Etapa 07
+  ['GET', '/api/projects'],
+  ['POST', '/api/projects'],
+  ['GET', `/api/projects/${f.projectA}`],
+  ['PATCH', `/api/projects/${f.projectA}`],
+  ['DELETE', `/api/projects/${f.projectA}`],
+  ['GET', '/api/tasks'],
+  ['POST', '/api/tasks'],
+  ['GET', '/api/tasks/assignees'],
+  ['GET', `/api/tasks/${f.taskA}`],
+  ['PATCH', `/api/tasks/${f.taskA}`],
+  ['DELETE', `/api/tasks/${f.taskA}`],
+  ['POST', `/api/tasks/${f.taskA}/status`],
+  ['POST', `/api/tasks/${f.taskA}/comments`],
+  ['POST', `/api/tasks/${f.taskA}/checklist`],
 ];
 
 test('sem sessão, TODAS as rotas protegidas respondem 401 (e nada é alterado)', async () => {
@@ -784,4 +799,75 @@ test('estágio 5: máquina de estados, validação, duplicação, visões e CSRF
     ).status(),
   ).toBe(403);
   await noOrigin.dispose();
+});
+
+test('estágio 7: org B não alcança projetos/tarefas da A; externo e escopo respeitados', async () => {
+  const f = fx();
+  for (const [m, url, data] of [
+    ['GET', `/api/tasks/${f.taskA}`],
+    ['PATCH', `/api/tasks/${f.taskA}`, { title: 'Invadida' }],
+    ['DELETE', `/api/tasks/${f.taskA}`],
+    ['POST', `/api/tasks/${f.taskA}/status`, { to: 'done' }],
+    ['POST', `/api/tasks/${f.taskA}/comments`, { body: 'oi' }],
+    ['POST', `/api/tasks/${f.taskA}/checklist`, { text: 'item' }],
+    ['GET', `/api/projects/${f.projectA}`],
+    ['PATCH', `/api/projects/${f.projectA}`, { name: 'Invadido' }],
+    ['DELETE', `/api/projects/${f.projectA}`],
+  ] as [string, string, unknown?][]) {
+    const res = await ownerB.fetch(url, {
+      method: m,
+      data: data ?? (m === 'GET' ? undefined : {}),
+    });
+    expect(res.status(), `${m} ${url}`).toBe(404);
+  }
+  expect(
+    (
+      await ownerB.post('/api/tasks', { data: { title: 'Vínculo alheio', projectId: f.projectA } })
+    ).status(),
+  ).toBe(404);
+  expect(JSON.stringify(await (await ownerB.get('/api/tasks')).json())).not.toContain(
+    'Fixture do A1',
+  );
+  expect(JSON.stringify(await (await ownerB.get('/api/projects')).json())).not.toContain(
+    'Projeto Fixture',
+  );
+  expect(JSON.stringify(await (await ownerB.get('/api/search?q=Fixture')).json())).not.toContain(
+    'Fixture do A1',
+  );
+  // a tarefa da B continua intacta
+  expect((await ownerB.get(`/api/tasks/${f.taskB}`)).status()).toBe(200);
+  expect((await ownerA.get(`/api/tasks/${f.taskB}`)).status()).toBe(404);
+
+  const ext = await apiLogin('cliente.a1@example.test');
+  expect((await ext.get('/api/tasks')).status()).toBe(403);
+  expect((await ext.get(`/api/tasks/${f.taskA}`)).status()).toBe(403);
+  expect((await ext.get('/api/projects')).status()).toBe(403);
+  await ext.dispose();
+
+  // consulta do A1 vê a tarefa do A1, mas não altera nem cria
+  expect((await scopedA1.get(`/api/tasks/${f.taskA}`)).status()).toBe(200);
+  expect(
+    (await scopedA1.post(`/api/tasks/${f.taskA}/status`, { data: { to: 'done' } })).status(),
+  ).toBe(403);
+  expect(
+    (
+      await scopedA1.post('/api/tasks', {
+        data: { title: 'Consulta criando', clientId: f.clientA1 },
+      })
+    ).status(),
+  ).toBe(403);
+  expect((await scopedA1.delete(`/api/tasks/${f.taskA}`)).status()).toBe(403);
+  // redator: edita, não exclui
+  const writer = await apiLogin('redator.a@example.test');
+  expect((await writer.delete(`/api/tasks/${f.taskA}`)).status()).toBe(403);
+  await writer.dispose();
+  // validação
+  expect((await ownerA.post('/api/tasks', { data: { title: 'ab' } })).status()).toBe(400);
+  expect(
+    (await ownerA.post(`/api/tasks/${f.taskA}/status`, { data: { to: 'blocked' } })).status(),
+  ).toBe(400);
+  expect((await ownerA.post(`/api/tasks/${ID}/status`, { data: { to: 'done' } })).status()).toBe(
+    404,
+  );
+  expect((await ownerA.get('/api/tasks/nao-e-id')).status()).toBe(404);
 });

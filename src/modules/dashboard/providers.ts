@@ -4,6 +4,7 @@ import { clients, invitations, memberships, roles, users } from '@/db/schema';
 import { canOrgWide, type Ctx } from '@/core/auth/context';
 import { listContents } from '@/modules/contents/service';
 import { listRequests } from '@/modules/requests/service';
+import { listTasks } from '@/modules/tasks/service';
 
 export type Severity = 'alert' | 'info';
 
@@ -228,8 +229,57 @@ const contentAttention: PendingProvider = {
   },
 };
 
+const taskAttention: PendingProvider = {
+  id: 'tasks.attention',
+  allowed: (ctx) =>
+    ctx.userKind === 'internal' && ctx.grants.some((g) => g.permissions.has('tasks:view')),
+  async collect(db, ctx, f) {
+    const { items } = await listTasks(
+      db,
+      ctx,
+      { status: 'open', clientId: f.clientId, limit: 200 },
+      f.now,
+    );
+    const out: PendingItem[] = [];
+    for (const t of items) {
+      const mine = t.assigneeUserId === ctx.userId;
+      const base = {
+        id: `task:${t.id}`,
+        kind: 'task',
+        href: `/tarefas/${t.id}`,
+        clientId: t.clientId,
+        clientName: t.clientName,
+      };
+      if (
+        t.due === 'overdue' &&
+        (mine ||
+          t.assigneeUserId === null ||
+          ctx.grants.some((g) => g.permissions.has('tasks:assign')))
+      )
+        out.push({
+          ...base,
+          severity: 'alert',
+          title: `Tarefa atrasada: ${t.title}`,
+          detail: `${t.clientName ?? 'Interna'} · ${t.assigneeName ?? 'sem responsável'}`,
+        });
+      else if (mine && (t.due === 'today' || t.status === 'blocked'))
+        out.push({
+          ...base,
+          severity: t.status === 'blocked' ? 'alert' : 'info',
+          title:
+            t.status === 'blocked'
+              ? `Tarefa bloqueada com você: ${t.title}`
+              : `Tarefa para hoje: ${t.title}`,
+          detail: t.clientName ?? 'Interna',
+        });
+    }
+    return out.slice(0, 30);
+  },
+};
+
 export const PENDING_PROVIDERS: PendingProvider[] = [
   requestAttention,
+  taskAttention,
   contentAttention,
   pendingInvitations,
   externalNeverAccessed,

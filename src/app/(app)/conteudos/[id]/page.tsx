@@ -169,6 +169,14 @@ export default async function ContentPage({
         />
       ) : editable ? (
         <div className="stack">
+          {internal && ctx.grants.some((g) => g.permissions.has('tasks:view')) && (
+            <p className="row">
+              <Link href={`/tarefas?view=lista&contentId=${id}`}>Tarefas deste conteúdo</Link>
+              {ctx.grants.some((g) => g.permissions.has('tasks:create')) && (
+                <Link href={`/tarefas/nova?conteudoId=${id}`}>Nova tarefa para este conteúdo</Link>
+              )}
+            </p>
+          )}
           <ContentActions
             id={id}
             status={c.status}

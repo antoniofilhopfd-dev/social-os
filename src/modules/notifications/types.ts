@@ -36,6 +36,18 @@ export const NOTIFICATION_TYPES = {
     label: 'Situação da solicitação atualizada',
     description: 'Quando a situação de uma solicitação que você abriu muda.',
   },
+  task_assigned: {
+    label: 'Tarefa atribuída a você',
+    description: 'Quando uma tarefa é criada ou atribuída a você.',
+  },
+  task_status: {
+    label: 'Situação da tarefa atualizada',
+    description: 'Quando uma tarefa que você criou é concluída ou bloqueada.',
+  },
+  task_comment: {
+    label: 'Comentário em tarefa',
+    description: 'Quando alguém comenta em uma tarefa atribuída a você.',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

@@ -30,6 +30,9 @@ export interface Fixtures {
   pillarA: string;
   campaignA: string;
   contentA1: string;
+  projectA: string;
+  taskA: string;
+  taskB: string;
   contentA2: string;
   contentExtA1: string;
   contentB1: string;

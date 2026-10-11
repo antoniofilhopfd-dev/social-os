@@ -28,6 +28,10 @@ export function buildNav(ctx: Ctx): NavGroup[] {
     operation.push({ href: '/solicitacoes', label: 'Solicitações' });
   if (ctx.grants.some((g) => g.permissions.has('contents:view')))
     operation.push({ href: '/conteudos', label: 'Conteúdos' });
+  if (ctx.userKind === 'internal' && ctx.grants.some((g) => g.permissions.has('tasks:view'))) {
+    operation.push({ href: '/tarefas', label: 'Tarefas' });
+    operation.push({ href: '/projetos', label: 'Projetos' });
+  }
   if (ctx.userKind === 'internal' && ctx.grants.some((g) => g.permissions.has('library:view')))
     operation.push({ href: '/biblioteca', label: 'Biblioteca' });
   if (operation.length) groups.push({ label: 'Operação', items: operation });
