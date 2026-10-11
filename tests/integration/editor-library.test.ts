@@ -23,7 +23,7 @@ import {
   saveDraft,
   saveVersion,
 } from '@/modules/editor/service';
-
+import { normalizeBody } from '@/modules/editor/rules';
 import {
   createFolder,
   deleteFolder,
