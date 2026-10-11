@@ -13,7 +13,12 @@ run('migrações (MySQL real)', () => {
 
   beforeAll(async () => {
     conn = await connect(url!);
-    await conn.query('DROP TABLE IF EXISTS system_info, schema_migrations');
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+    const [all] = await conn.query<RowDataPacket[]>(
+      'SELECT table_name AS t FROM information_schema.tables WHERE table_schema = DATABASE()',
+    );
+    for (const r of all) await conn.query(`DROP TABLE IF EXISTS \`${r.t as string}\``);
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
   });
   afterAll(async () => {
     await conn.end();
@@ -30,7 +35,10 @@ run('migrações (MySQL real)', () => {
     const m = await loadMigrations(dir);
     expect(m.length).toBeGreaterThan(0);
     const ran = await migrateUp(conn, m);
-    expect(ran).toContain('0001');
+    expect(ran).toEqual(['0001', '0002', '0003', '0004']);
+    expect(await tables()).toEqual(
+      expect.arrayContaining(['organizations', 'users', 'sessions', 'audit_logs', 'memberships']),
+    );
     expect(await tables()).toContain('system_info');
     const [rows] = await conn.query<RowDataPacket[]>(
       "SELECT value FROM system_info WHERE `key`='schema_baseline'",

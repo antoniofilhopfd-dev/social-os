@@ -18,3 +18,13 @@ export function getPool(url: string): Pool {
   pool ??= g.__socialosPool ??= createPool(url);
   return pool;
 }
+
+/** Detecta violação de unicidade do MySQL, inclusive quando o Drizzle encapsula o erro em `cause`. */
+export function isDuplicateEntry(err: unknown): boolean {
+  let e: unknown = err;
+  for (let i = 0; i < 4 && e; i++) {
+    if ((e as { code?: string }).code === 'ER_DUP_ENTRY') return true;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return false;
+}

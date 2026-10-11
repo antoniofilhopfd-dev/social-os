@@ -1,5 +1,5 @@
 'use client';
-import { useRef } from 'react';
+import { useId, useRef } from 'react';
 import { Button } from './components';
 
 /** Confirmação de ação destrutiva usando <dialog> nativo (foco e Esc tratados pelo navegador). */
@@ -17,13 +17,14 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   return (
     <>
       <Button variant="danger" onClick={() => ref.current?.showModal()}>
         {triggerLabel}
       </Button>
-      <dialog ref={ref} className="dialog" aria-labelledby="confirm-title">
-        <h2 id="confirm-title">{title}</h2>
+      <dialog ref={ref} className="dialog" aria-labelledby={titleId}>
+        <h2 id={titleId}>{title}</h2>
         <p className="muted">{description}</p>
         <div className="row">
           <Button variant="secondary" onClick={() => ref.current?.close()}>

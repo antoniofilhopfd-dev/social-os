@@ -10,6 +10,8 @@ const schema = z.object({
     .regex(/^mysql:\/\//)
     .optional(),
   STORAGE_DIR: z.string().min(1),
+  /** 'true' somente se a aplicação está atrás de um proxy confiável que define X-Forwarded-For. */
+  TRUST_PROXY: z.enum(['true', 'false']).default('false'),
 });
 
 export type Env = z.infer<typeof schema>;

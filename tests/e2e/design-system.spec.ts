@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { uiLogin } from './helpers';
 
 const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -58,7 +59,12 @@ test('diálogo de confirmação abre, cancela e confirma', async ({ page }) => {
   await expect(page.getByText('Confirmação recebida')).toBeVisible();
 });
 
-test('rota inexistente mostra página 404 em português', async ({ page }) => {
+test('rota inexistente: sem sessão vai ao login; autenticado vê 404 em português', async ({
+  page,
+}) => {
+  await page.goto('/nao-existe');
+  await expect(page).toHaveURL(/\/login\?next=%2Fnao-existe/);
+  await uiLogin(page, 'dona.a@example.test');
   const res = await page.goto('/nao-existe');
   expect(res?.status()).toBe(404);
   await expect(page.getByText('Página não encontrada')).toBeVisible();

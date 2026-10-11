@@ -13,3 +13,4 @@ storage
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts
+tests/e2e/.fixtures.json

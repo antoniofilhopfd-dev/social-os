@@ -19,9 +19,12 @@
     "db:migrate": "tsx scripts/migrate.ts up",
     "db:rollback": "tsx scripts/migrate.ts down",
     "db:status": "tsx scripts/migrate.ts status",
-    "screenshots": "tsx scripts/screenshots.ts"
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "screenshots:e2e": "SCREENSHOTS=1 playwright test tests/e2e/screenshots.spec.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
+    "drizzle-orm": "^0.45.4",
     "mysql2": "^3.24.5",
     "next": "^16.4.0",
     "react": "^19.3.0",

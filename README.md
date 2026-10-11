@@ -3,8 +3,9 @@
 Plataforma de gestão de operações de social media **orgânico** para agências com múltiplos clientes.
 Projeto independente do AdsPilot (sem tráfego pago, sem dados ou código compartilhados).
 
-> **Estado atual: Etapa 01/13 (fundação).** Não há funcionalidades de negócio ainda.
-> Existem a base técnica, o design system (`/design-system`) e a infraestrutura de testes.
+> **Estado atual: Etapa 02/13 (autenticação e multiempresa).** Login, sessões, convites, equipe,
+> funções/permissões, clientes (cadastro mínimo), auditoria e isolamento entre organizações.
+> Ainda não há dashboard nem módulos de negócio (Etapa 03 em diante).
 
 ## Requisitos
 
@@ -17,6 +18,8 @@ Projeto independente do AdsPilot (sem tráfego pago, sem dados ou código compar
 cp .env.example .env        # ajuste DATABASE_URL e TEST_DATABASE_URL
 npm install
 npm run db:migrate          # aplica migrações (db:rollback reverte a última, db:status lista)
+npm run bootstrap -- --org "Minha Agência" --slug minha-agencia \
+  --owner-email voce@exemplo.com --owner-name "Seu Nome"   # imprime o link para definir a senha
 npm run dev                 # http://localhost:3000
 ```
 
@@ -31,11 +34,13 @@ npm run dev                 # http://localhost:3000
 | `npm run test:e2e`     | Playwright (build + servidor + acessibilidade em 3 larguras). No ambiente de nuvem: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome` |
 | `npm run screenshots`  | Prints reais das telas em `screenshots/` (servidor precisa estar no ar)                                                                                   |
 
-⚠️ `TEST_DATABASE_URL` aponta para um banco que os testes **apagam e recriam**. Nunca use o banco de desenvolvimento ou produção.
+⚠️ `TEST_DATABASE_URL` aponta para um banco que os testes **apagam e recriam** (o nome precisa conter "test"). Nunca use o banco de desenvolvimento ou produção.
 
 ## Documentação
 
 - [docs/ARQUITETURA.md](docs/ARQUITETURA.md)
+- [docs/SEGURANCA.md](docs/SEGURANCA.md)
+- [docs/PERMISSOES.md](docs/PERMISSOES.md)
 - [docs/CONVENCOES.md](docs/CONVENCOES.md)
 - [docs/HOSPEDAGEM.md](docs/HOSPEDAGEM.md)
 - [docs/BACKUP.md](docs/BACKUP.md)

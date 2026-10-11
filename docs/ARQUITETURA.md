@@ -6,8 +6,11 @@ Monólito modular: Next.js (App Router) + TypeScript estrito + MySQL 8, em um ú
 
 ```
 src/app/            rotas e layouts (área interna; o portal do cliente terá grupo de rotas próprio)
-src/modules/        um diretório por domínio (schema, service, policy). Vazio na Etapa 01.
-src/core/           env, logger, errors, db, migrations (e, nas próximas etapas: auth, tenancy, audit)
+src/modules/        um diretório por domínio (service, schema de entrada). Etapa 02: auth, team, roles, clients, audit.
+src/core/           env, logger, errors, db, migrations, ids, crypto, password, audit, rate-limit,
+                    auth/ (contexto de autorização, sessões, cookies), permissions/ (catálogo e seed), http (wrapper de rotas)
+src/db/             schema Drizzle (espelha as migrações) e fábrica do cliente
+src/proxy.ts        CSP com nonce e redirecionamento de páginas sem cookie de sessão
 src/integrations/   contratos e drivers externos. Hoje: StorageDriver + driver local em disco.
 src/ui/             design system (componentes e estados) e utilitário de contraste
 migrations/         SQL versionado (NNNN_nome.up.sql / .down.sql)
