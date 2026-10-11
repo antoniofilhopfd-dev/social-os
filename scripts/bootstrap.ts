@@ -9,6 +9,7 @@ import { audit } from '../src/core/audit';
 import { newId } from '../src/core/ids';
 import { seedPermissionsAndRoles, systemRoleId } from '../src/core/permissions/seed';
 import { issuePasswordReset } from '../src/modules/auth/service';
+import { ensureDefaultRequestTypes } from '../src/modules/requests/service';
 
 /**
  * Cria a primeira organização e seu proprietário (ou um administrador de plataforma).
@@ -74,6 +75,7 @@ async function main() {
         scopeType: 'organization',
         scopeKey: '*',
       });
+      await ensureDefaultRequestTypes(db, orgId);
       await audit(db, {
         organizationId: orgId,
         actorUserId: null,

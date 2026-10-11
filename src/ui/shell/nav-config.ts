@@ -23,6 +23,9 @@ export function buildNav(ctx: Ctx): NavGroup[] {
       ],
     },
   ];
+  if (ctx.grants.some((g) => g.permissions.has('requests:view'))) {
+    groups.push({ label: 'Operação', items: [{ href: '/solicitacoes', label: 'Solicitações' }] });
+  }
   if (ctx.grants.some((g) => g.permissions.has('clients:view'))) {
     groups.push({ label: 'Cadastros', items: [{ href: '/clientes', label: 'Clientes' }] });
   }
@@ -30,6 +33,8 @@ export function buildNav(ctx: Ctx): NavGroup[] {
   if (canOrgWide(ctx, 'team:view')) admin.push({ href: '/equipe', label: 'Equipe' });
   if (canOrgWide(ctx, 'roles:view')) admin.push({ href: '/funcoes', label: 'Funções' });
   if (canOrgWide(ctx, 'audit:view')) admin.push({ href: '/auditoria', label: 'Auditoria' });
+  if (canOrgWide(ctx, 'settings:view'))
+    admin.push({ href: '/configuracoes/solicitacoes', label: 'Tipos de solicitação' });
   if (admin.length) groups.push({ label: 'Administração', items: admin });
   groups.push({
     label: 'Minha conta',

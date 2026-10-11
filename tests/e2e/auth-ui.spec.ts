@@ -106,37 +106,41 @@ test('link de nova senha pela interface: redefine, derruba sessões e permite no
   await Promise.all([maria.dispose(), fresh.dispose()]);
 });
 
-test('clientes pela interface: criar, renomear (validação) e excluir com confirmação', async ({
+test('clientes pela interface: criar, configurar, ver histórico e excluir com confirmação', async ({
   page,
 }) => {
   await uiLogin(page, OWNER);
   await page.goto('/clientes');
   await page.getByLabel('Novo cliente').fill('Cliente UI');
-  await page.getByRole('button', { name: 'Adicionar' }).click();
-  await expect(page.getByRole('cell', { name: 'Cliente UI' })).toBeVisible();
+  await page.getByRole('button', { name: 'Adicionar e configurar' }).click();
+  await expect(page.getByRole('heading', { name: 'Cliente UI', level: 1 })).toBeVisible();
+
+  await page.getByLabel('Tom de voz', { exact: true }).fill('Descontraído e direto');
+  await page.getByLabel('SLA de primeira resposta (horas)').fill('12');
+  await page.getByRole('button', { name: 'Salvar alterações' }).click();
+  await expect(page.getByText('Alterações salvas.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Tom de voz', { exact: true })).toHaveValue('Descontraído e direto');
+  await expect(page.getByLabel('SLA de primeira resposta (horas)')).toHaveValue('12');
+
+  await page.getByRole('link', { name: 'Histórico' }).click();
+  await expect(page.getByText('Dados alterados')).toBeVisible();
+  await expect(page.getByText(/Tom de voz.*Descontraído e direto/)).toBeVisible();
+
+  await page.goto('/clientes');
   await page.getByLabel('Novo cliente').fill('Cliente UI');
-  await page.getByRole('button', { name: 'Adicionar' }).click();
+  await page.getByRole('button', { name: 'Adicionar e configurar' }).click();
   await expect(page.locator('.alert-danger')).toContainText('Já existe um cliente com este nome');
 
-  const row = page.getByRole('row', { name: /Cliente UI/ });
-  await row.getByRole('button', { name: 'Renomear' }).click();
-  await page.getByLabel('Novo nome de Cliente UI').fill('Cliente UI Renomeado');
-  await page.getByRole('button', { name: 'Salvar' }).click();
-  await expect(page.getByRole('cell', { name: 'Cliente UI Renomeado' })).toBeVisible();
-
-  await page
-    .getByRole('row', { name: /Cliente UI Renomeado/ })
-    .getByRole('button', { name: 'Excluir' })
-    .click();
-  const dialog = page.getByRole('dialog', { name: 'Excluir Cliente UI Renomeado?' });
+  await page.getByRole('link', { name: 'Cliente UI' }).click();
+  await page.getByRole('button', { name: 'Excluir cliente' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Excluir Cliente UI?' });
   await dialog.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(page.getByRole('cell', { name: 'Cliente UI Renomeado' })).toBeVisible();
-  await page
-    .getByRole('row', { name: /Cliente UI Renomeado/ })
-    .getByRole('button', { name: 'Excluir' })
-    .click();
+  await expect(page.getByRole('heading', { name: 'Cliente UI', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Excluir cliente' }).click();
   await dialog.getByRole('button', { name: 'Excluir', exact: true }).click();
-  await expect(page.getByRole('cell', { name: 'Cliente UI Renomeado' })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/clientes$/);
+  await expect(page.getByRole('link', { name: 'Cliente UI' })).toHaveCount(0);
 });
 
 test('funções pela interface: matriz de permissões, criação e persistência; função do sistema é somente leitura', async ({

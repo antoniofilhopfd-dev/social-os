@@ -2,6 +2,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Db } from '@/db';
 import { clients, invitations, memberships, roles, users } from '@/db/schema';
 import { canOrgWide, type Ctx } from '@/core/auth/context';
+import { listRequests } from '@/modules/requests/service';
 
 export type Severity = 'alert' | 'info';
 
@@ -114,4 +115,72 @@ const externalNeverAccessed: PendingProvider = {
   },
 };
 
-export const PENDING_PROVIDERS: PendingProvider[] = [pendingInvitations, externalNeverAccessed];
+const requestAttention: PendingProvider = {
+  id: 'requests.attention',
+  allowed: (ctx) =>
+    ctx.grants.some((g) => g.permissions.has('requests:view')) && ctx.userKind === 'internal',
+  async collect(db, ctx, f) {
+    // Reaproveita a consulta do módulo: mesma organização, mesmo escopo de cliente.
+    const { items } = await listRequests(
+      db,
+      ctx,
+      { status: 'open', clientId: f.clientId, limit: 50 },
+      f.now,
+    );
+    const out: PendingItem[] = [];
+    for (const r of items) {
+      if (r.sla === 'response_overdue') {
+        out.push({
+          id: `request:${r.id}`,
+          kind: 'request',
+          severity: 'alert',
+          title: `Solicitação #${r.number} sem resposta no prazo`,
+          detail: `${r.clientName} · ${r.title}`,
+          href: `/solicitacoes/${r.id}`,
+          clientId: r.clientId,
+          clientName: r.clientName,
+        });
+      } else if (r.sla === 'due_overdue') {
+        out.push({
+          id: `request:${r.id}`,
+          kind: 'request',
+          severity: 'alert',
+          title: `Prazo estimado vencido: #${r.number}`,
+          detail: `${r.clientName} · ${r.title}`,
+          href: `/solicitacoes/${r.id}`,
+          clientId: r.clientId,
+          clientName: r.clientName,
+        });
+      } else if (r.status === 'new') {
+        out.push({
+          id: `request:${r.id}`,
+          kind: 'request',
+          severity: 'info',
+          title: `Nova solicitação #${r.number}: ${r.title}`,
+          detail: `${r.clientName} · aguardando triagem`,
+          href: `/solicitacoes/${r.id}`,
+          clientId: r.clientId,
+          clientName: r.clientName,
+        });
+      } else if (r.status === 'awaiting_info') {
+        out.push({
+          id: `request:${r.id}`,
+          kind: 'request',
+          severity: 'info',
+          title: `Aguardando informações do solicitante: #${r.number}`,
+          detail: `${r.clientName} · ${r.title}`,
+          href: `/solicitacoes/${r.id}`,
+          clientId: r.clientId,
+          clientName: r.clientName,
+        });
+      }
+    }
+    return out;
+  },
+};
+
+export const PENDING_PROVIDERS: PendingProvider[] = [
+  requestAttention,
+  pendingInvitations,
+  externalNeverAccessed,
+];

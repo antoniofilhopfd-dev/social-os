@@ -12,6 +12,26 @@ export const NOTIFICATION_TYPES = {
     label: 'Link de nova senha gerado',
     description: 'Quando um administrador gera um link de redefinição para a sua conta.',
   },
+  request_created: {
+    label: 'Nova solicitação',
+    description: 'Quando uma nova solicitação chega (para quem pode atribuir solicitações).',
+  },
+  request_assigned: {
+    label: 'Solicitação atribuída a você',
+    description: 'Quando uma solicitação é atribuída a você.',
+  },
+  request_info_requested: {
+    label: 'Pedido de informações',
+    description: 'Quando a equipe precisa de informações complementares sobre a sua solicitação.',
+  },
+  request_info_provided: {
+    label: 'Informações ou comentário recebido',
+    description: 'Quando o solicitante responde ou comenta em uma solicitação atribuída a você.',
+  },
+  request_status_changed: {
+    label: 'Situação da solicitação atualizada',
+    description: 'Quando a situação de uma solicitação que você abriu muda.',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

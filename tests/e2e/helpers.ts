@@ -22,6 +22,15 @@ export interface Fixtures {
   writerAUserId: string;
   ownerAUserId: string;
   notificationA: string;
+  brandA: string;
+  profileA: string;
+  contactA: string;
+  dateA: string;
+  typeA: string;
+  requestA1: string;
+  requestA2: string;
+  requestExtA1: string;
+  requestB1: string;
 }
 export const fx = (): Fixtures =>
   JSON.parse(readFileSync(path.resolve(__dirname, '.fixtures.json'), 'utf8'));

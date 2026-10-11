@@ -5,6 +5,7 @@ import { api } from '@/ui/api-client';
 
 interface Results {
   clients: { id: string; name: string; href: string }[];
+  requests: { id: string; label: string; href: string }[];
   people: { userId: string; name: string; email: string; href: string }[];
 }
 
@@ -69,7 +70,11 @@ export function SearchDialog() {
     };
   }, [term]);
 
-  const empty = results && results.clients.length === 0 && results.people.length === 0;
+  const empty =
+    results &&
+    results.clients.length === 0 &&
+    results.people.length === 0 &&
+    results.requests.length === 0;
 
   return (
     <>
@@ -88,7 +93,7 @@ export function SearchDialog() {
         onClick={(e) => e.target === ref.current && close()}
       >
         <div className="field">
-          <label htmlFor="global-search">Buscar clientes e pessoas</label>
+          <label htmlFor="global-search">Buscar clientes, solicitações e pessoas</label>
           <input
             id="global-search"
             ref={inputRef}
@@ -116,6 +121,20 @@ export function SearchDialog() {
                     <li key={c.id}>
                       <Link href={c.href} onClick={close}>
                         {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {results.requests.length > 0 && (
+              <>
+                <p className="search-group">Solicitações</p>
+                <ul className="search-results">
+                  {results.requests.map((r) => (
+                    <li key={r.id}>
+                      <Link href={r.href} onClick={close}>
+                        {r.label}
                       </Link>
                     </li>
                   ))}

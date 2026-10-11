@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
-import { memberships, notifications } from '@/db/schema';
+import { memberships, notifications, users } from '@/db/schema';
 import { resetDatabase, world } from '../helpers/db';
 import { PASSWORD } from './constants';
 import { systemRoleId } from '@/core/permissions/seed';
@@ -9,6 +9,8 @@ import { createClient } from '@/modules/clients/service';
 import { createRole } from '@/modules/roles/service';
 import { createInvitation } from '@/modules/team/service';
 import { notify } from '@/modules/notifications/service';
+import { createBrand, createContact, createDate, createProfile } from '@/modules/clients/children';
+import { createRequest, listRequestTypes } from '@/modules/requests/service';
 
 export default async function globalSetup() {
   await resetDatabase();
@@ -53,6 +55,62 @@ export default async function globalSetup() {
       .select()
       .from(notifications)
       .where(eq(notifications.userId, ownerA.userId));
+    // Estágio 4: marca, perfil, contato, data e solicitações (uma por cliente, inclusive de um externo)
+    const brandA = (await createBrand(w.db, ownerA.ctx, clientA1, { name: 'Marca Fixture A1' })).id;
+    const profileA = (
+      await createProfile(w.db, ownerA.ctx, brandA, {
+        network: 'instagram',
+        profileName: 'Perfil Fixture',
+        handle: 'fixture_a1',
+      })
+    ).id;
+    const contactA = (await createContact(w.db, ownerA.ctx, clientA1, { name: 'Contato Fixture' }))
+      .id;
+    const dateA = (
+      await createDate(w.db, ownerA.ctx, clientA1, {
+        label: 'Data Fixture',
+        eventDate: '2031-05-01',
+      })
+    ).id;
+    const typesA = await listRequestTypes(w.db, ownerA.ctx);
+    const typeA = typesA.find((t) => t.name === 'Outro')!.id;
+    const reqBase = { typeId: typeA, description: 'Descrição da solicitação de fixture' };
+    const requestA1 = (
+      await createRequest(w.db, ownerA.ctx, {
+        ...reqBase,
+        clientId: clientA1,
+        title: 'Fixture solicitação do A1',
+      })
+    ).id;
+    const requestA2 = (
+      await createRequest(w.db, ownerA.ctx, {
+        ...reqBase,
+        clientId: clientA2,
+        title: 'Fixture solicitação do A2',
+      })
+    ).id;
+    const extA1 = await w.db.select().from(users).where(eq(users.email, 'cliente.a1@example.test'));
+    const extCtx = await w.ctx(extA1[0]!.id, A);
+    const requestExtA1 = (
+      await createRequest(w.db, extCtx, {
+        ...reqBase,
+        clientId: clientA1,
+        title: 'Fixture pedido do cliente externo',
+      })
+    ).id;
+    const typeB = (await listRequestTypes(w.db, ownerB.ctx))[0]!.id;
+    const requestB1 = (
+      await createRequest(w.db, ownerB.ctx, {
+        typeId: typeB,
+        description: 'Descrição fixture B',
+        clientId: clientB1,
+        title: 'Fixture solicitação da B',
+        network: 'instagram',
+        format: 'Post',
+        objective: 'x',
+        desiredDate: '2031-01-01',
+      })
+    ).id;
     const roleA = (
       await createRole(w.db, ownerA.ctx, {
         name: 'Função Personalizada A',
@@ -84,6 +142,15 @@ export default async function globalSetup() {
         writerAUserId: writerA.userId,
         ownerAUserId: ownerA.userId,
         notificationA: notifA!.id,
+        brandA,
+        profileA,
+        contactA,
+        dateA,
+        typeA,
+        requestA1,
+        requestA2,
+        requestExtA1,
+        requestB1,
       }),
     );
   } finally {

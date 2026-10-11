@@ -167,7 +167,11 @@ describe('busca global', () => {
   it('encontra clientes da própria organização e ignora termos curtos', async () => {
     const r = await searchAll(w.db, ownerA.ctx, 'padaria');
     expect(r.clients.map((c) => c.name)).toEqual(['Padaria Doce Pão']);
-    expect(await searchAll(w.db, ownerA.ctx, 'p')).toEqual({ clients: [], people: [] });
+    expect(await searchAll(w.db, ownerA.ctx, 'p')).toEqual({
+      clients: [],
+      people: [],
+      requests: [],
+    });
   });
 
   it('não vaza dados de outra organização (clientes nem pessoas)', async () => {

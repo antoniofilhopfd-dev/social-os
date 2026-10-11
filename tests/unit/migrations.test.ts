@@ -35,7 +35,7 @@ run('migrações (MySQL real)', () => {
     const m = await loadMigrations(dir);
     expect(m.length).toBeGreaterThan(0);
     const ran = await migrateUp(conn, m);
-    expect(ran).toEqual(['0001', '0002', '0003', '0004', '0005']);
+    expect(ran).toEqual(['0001', '0002', '0003', '0004', '0005', '0006', '0007']);
     expect(await tables()).toEqual(
       expect.arrayContaining(['organizations', 'users', 'sessions', 'audit_logs', 'memberships']),
     );

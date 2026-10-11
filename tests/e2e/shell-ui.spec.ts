@@ -80,8 +80,7 @@ test.describe('dashboard', () => {
     await page.getByLabel('Cliente', { exact: true }).selectOption({ label: 'Cliente A1' });
     await page.getByRole('button', { name: 'Aplicar filtros' }).click();
     await expect(page).toHaveURL(/cliente=/);
-    // o convite pendente não é de nenhum cliente, então some com o filtro; o estado vazio orienta
-    await expect(page.getByText('Nada pendente por aqui')).toBeVisible();
+    // o convite pendente não é de nenhum cliente, então some com o filtro
     await expect(page.getByText('Convite aguardando aceite: Pendente A')).toHaveCount(0);
   });
 
@@ -92,7 +91,7 @@ test.describe('dashboard', () => {
     await expect(page.getByRole('heading', { name: /Olá, redator/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Atividade recente/ })).toHaveCount(0);
     await expect(page.getByText('Convites pendentes')).toHaveCount(0);
-    await expect(page.getByText('Nada pendente por aqui')).toBeVisible();
+    await expect(page.getByText('Convite aguardando aceite')).toHaveCount(0); // pendências de equipe não aparecem para o redator
   });
 
   test('parâmetros de filtro adulterados são ignorados com segurança', async ({ page }) => {
@@ -115,7 +114,7 @@ test.describe('busca global', () => {
     await page.keyboard.press('/');
     const dialog = page.getByRole('dialog', { name: 'Busca' });
     await expect(dialog).toBeVisible();
-    await page.getByLabel('Buscar clientes e pessoas').fill('Cliente A');
+    await page.getByLabel('Buscar clientes, solicitações e pessoas').fill('Cliente A');
     await expect(dialog.getByRole('link', { name: 'Cliente A1', exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Cliente A2', exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Cliente B1', exact: true })).toHaveCount(0);
@@ -132,7 +131,7 @@ test.describe('busca global', () => {
     await uiLogin(page, OWNER);
     await page.getByRole('button', { name: /Buscar/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Busca' });
-    const input = page.getByLabel('Buscar clientes e pessoas');
+    const input = page.getByLabel('Buscar clientes, solicitações e pessoas');
     await input.fill('a');
     await expect(dialog.getByText('Buscando')).toHaveCount(0);
     await input.fill('redator.a');
@@ -159,7 +158,7 @@ test.describe('busca global', () => {
     await page.waitForLoadState('networkidle'); // espera a hidratação (o atalho depende dela)
     await page.keyboard.press('/');
     const dialog = page.getByRole('dialog', { name: 'Busca' });
-    await page.getByLabel('Buscar clientes e pessoas').fill('Cliente A');
+    await page.getByLabel('Buscar clientes, solicitações e pessoas').fill('Cliente A');
     await expect(dialog.getByRole('link', { name: 'Cliente A1', exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Cliente A2', exact: true })).toHaveCount(0);
     await expect(dialog.getByText('Pessoas', { exact: true })).toHaveCount(0);
@@ -240,7 +239,7 @@ test.describe('acessibilidade dos overlays', () => {
     await uiLogin(page, OWNER);
     await page.waitForLoadState('networkidle'); // espera a hidratação (o atalho depende dela)
     await page.keyboard.press('/');
-    await page.getByLabel('Buscar clientes e pessoas').fill('Cliente');
+    await page.getByLabel('Buscar clientes, solicitações e pessoas').fill('Cliente');
     await expect(
       page
         .getByRole('dialog', { name: 'Busca' })

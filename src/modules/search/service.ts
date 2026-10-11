@@ -3,12 +3,14 @@ import type { Db } from '@/db';
 import { memberships, users } from '@/db/schema';
 import { canOrgWide, type Ctx } from '@/core/auth/context';
 import { listClients, likePattern } from '@/modules/clients/service';
+import { listRequests } from '@/modules/requests/service';
 
 export const SEARCH_MIN_LENGTH = 2;
 const LIMIT = 8;
 
 export interface SearchResults {
   clients: { id: string; name: string; href: string }[];
+  requests: { id: string; label: string; href: string }[];
   people: { userId: string; name: string; email: string; href: string }[];
 }
 
@@ -18,10 +20,14 @@ export interface SearchResults {
  */
 export async function searchAll(db: Db, ctx: Ctx, rawQuery: string): Promise<SearchResults> {
   const q = rawQuery.trim().slice(0, 80);
-  if (q.length < SEARCH_MIN_LENGTH) return { clients: [], people: [] };
+  if (q.length < SEARCH_MIN_LENGTH) return { clients: [], people: [], requests: [] };
 
   const clientRows = ctx.grants.some((g) => g.permissions.has('clients:view'))
     ? await listClients(db, ctx, { q, limit: LIMIT })
+    : [];
+
+  const requestRows = ctx.grants.some((g) => g.permissions.has('requests:view'))
+    ? (await listRequests(db, ctx, { q, limit: LIMIT })).items
     : [];
 
   let people: SearchResults['people'] = [];
@@ -46,6 +52,11 @@ export async function searchAll(db: Db, ctx: Ctx, rawQuery: string): Promise<Sea
       id: c.id,
       name: c.name,
       href: `/clientes?q=${encodeURIComponent(c.name)}`,
+    })),
+    requests: requestRows.map((r) => ({
+      id: r.id,
+      label: `#${r.number} · ${r.title}`,
+      href: `/solicitacoes/${r.id}`,
     })),
     people,
   };

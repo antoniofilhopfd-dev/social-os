@@ -328,3 +328,203 @@ test('troca de organização: não-membro recebe 404 e a sessão não muda', asy
   expect(clients).toEqual([f.clientB1]);
   await multi.dispose();
 });
+
+test('estágio 4: org B não alcança clientes filhos, marcas, perfis, solicitações nem tipos da A (404, sem alteração)', async () => {
+  const f = fx();
+  const brand = { name: 'Invasor Teste' };
+  const contact = { name: 'Invasor Teste' };
+  const date = { label: 'Invasor', eventDate: '2031-01-01' };
+  const profile = { network: 'tiktok', profileName: 'Invasor', handle: 'invasor' };
+  const attempts: [string, string, unknown?][] = [
+    ['GET', `/api/clients/${f.clientA1}/contacts`],
+    ['POST', `/api/clients/${f.clientA1}/contacts`, contact],
+    ['PUT', `/api/clients/${f.clientA1}/contacts/${f.contactA}`, contact],
+    ['DELETE', `/api/clients/${f.clientA1}/contacts/${f.contactA}`],
+    ['GET', `/api/clients/${f.clientA1}/dates`],
+    ['POST', `/api/clients/${f.clientA1}/dates`, date],
+    ['DELETE', `/api/clients/${f.clientA1}/dates/${f.dateA}`],
+    ['GET', `/api/clients/${f.clientA1}/brands`],
+    ['POST', `/api/clients/${f.clientA1}/brands`, brand],
+    ['GET', `/api/clients/${f.clientA1}/history`],
+    ['PUT', `/api/brands/${f.brandA}`, brand],
+    ['DELETE', `/api/brands/${f.brandA}`],
+    ['POST', `/api/brands/${f.brandA}/profiles`, profile],
+    ['PUT', `/api/social-profiles/${f.profileA}`, profile],
+    ['DELETE', `/api/social-profiles/${f.profileA}`],
+    ['GET', `/api/requests/${f.requestA1}`],
+    ['PATCH', `/api/requests/${f.requestA1}`, { title: 'Invadida' }],
+    ['POST', `/api/requests/${f.requestA1}/status`, { to: 'cancelled', message: 'x' }],
+    ['POST', `/api/requests/${f.requestA1}/assign`, { assigneeUserId: null }],
+    ['POST', `/api/requests/${f.requestA1}/comments`, { body: 'invasão' }],
+    ['PUT', `/api/request-types/${f.typeA}`, { name: 'Invadido', requiredFields: [] }],
+  ];
+  for (const [method, url, data] of attempts) {
+    const res = await ownerB.fetch(url, { method, data });
+    expect(res.status(), `${method} ${url}`).toBe(404);
+  }
+  const brands = (await (await ownerA.get(`/api/clients/${f.clientA1}/brands`)).json()).brands;
+  expect(
+    brands.some(
+      (b: { id: string; name: string }) => b.id === f.brandA && b.name === 'Marca Fixture A1',
+    ),
+  ).toBe(true);
+  const req = await (await ownerA.get(`/api/requests/${f.requestA1}`)).json();
+  expect(req.status).toBe('new');
+  const listB = (await (await ownerB.get('/api/requests')).json()).items.map(
+    (i: { id: string }) => i.id,
+  );
+  expect(listB).toEqual([f.requestB1]);
+  expect(
+    JSON.stringify((await (await ownerB.get('/api/request-types')).json()).types),
+  ).not.toContain('Função');
+});
+
+test('estágio 4: cliente externo só vê as próprias solicitações e não opera a triagem', async () => {
+  const f = fx();
+  const ext = await apiLogin('cliente.a1@example.test');
+  const mine = (await (await ext.get('/api/requests')).json()).items;
+  expect(mine.every((i: { clientId: string }) => i.clientId === f.clientA1)).toBe(true);
+  expect(mine.map((i: { id: string }) => i.id)).toContain(f.requestExtA1);
+  expect((await ext.get(`/api/requests/${f.requestA2}`)).status()).toBe(404);
+  expect(
+    (
+      await ext.post(`/api/requests/${f.requestExtA1}/status`, { data: { to: 'in_triage' } })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await ext.post(`/api/requests/${f.requestExtA1}/assign`, { data: { assigneeUserId: null } })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (await ext.patch(`/api/requests/${f.requestExtA1}`, { data: { priority: 'low' } })).status(),
+  ).toBe(403);
+  expect((await ext.get('/api/requests/assignees')).status()).toBe(403);
+  expect((await ext.get(`/api/clients/${f.clientA1}/history`)).status()).toBe(403);
+  expect(
+    (await ext.patch(`/api/clients/${f.clientA1}`, { data: { toneOfVoice: 'x' } })).status(),
+  ).toBe(403);
+  const detail = await (await ext.get(`/api/clients/${f.clientA1}`)).json();
+  expect(detail.internalNotes).toBeNull();
+  // nota interna do staff fica invisível ao externo
+  expect(
+    (
+      await ownerA.post(`/api/requests/${f.requestExtA1}/comments`, {
+        data: { body: 'Nota secreta da equipe', internalOnly: true },
+      })
+    ).status(),
+  ).toBe(200);
+  const seenByExt = JSON.stringify(await (await ext.get(`/api/requests/${f.requestExtA1}`)).json());
+  expect(seenByExt).not.toContain('Nota secreta');
+  const seenByStaff = JSON.stringify(
+    await (await ownerA.get(`/api/requests/${f.requestExtA1}`)).json(),
+  );
+  expect(seenByStaff).toContain('Nota secreta');
+  expect(
+    (
+      await ext.post(`/api/requests/${f.requestExtA1}/comments`, {
+        data: { body: 'tentando', internalOnly: true },
+      })
+    ).status(),
+  ).toBe(403);
+  await ext.dispose();
+});
+
+test('estágio 4: permissões por função (redator e consulta do A1)', async () => {
+  const f = fx();
+  const writer = await apiLogin('redator.a@example.test');
+  expect(
+    (await writer.patch(`/api/requests/${f.requestA1}`, { data: { title: 'Nope' } })).status(),
+  ).toBe(403);
+  expect(
+    (
+      await writer.post('/api/request-types', {
+        data: { name: 'Tipo sem permissão', requiredFields: [] },
+      })
+    ).status(),
+  ).toBe(403);
+  expect((await writer.get(`/api/clients/${f.clientA1}/history`)).status()).toBe(403);
+  expect(
+    (
+      await writer.post(`/api/clients/${f.clientA1}/contacts`, { data: { name: 'Sem permissão' } })
+    ).status(),
+  ).toBe(403);
+  expect((await writer.get('/api/requests')).status()).toBe(200);
+  await writer.dispose();
+  expect(
+    (
+      await scopedA1.post('/api/requests', {
+        data: {
+          clientId: f.clientA1,
+          typeId: f.typeA,
+          title: 'Sem permissão',
+          description: 'Texto de teste',
+        },
+      })
+    ).status(),
+  ).toBe(403);
+  expect((await scopedA1.get(`/api/requests/${f.requestA2}`)).status()).toBe(404);
+});
+
+test('estágio 4: validação, duplicidade e CSRF em solicitações', async () => {
+  const f = fx();
+  const invalid = await ownerA.post('/api/requests', {
+    data: { clientId: f.clientA1, typeId: f.typeA, title: 'ab', description: '' },
+  });
+  expect(invalid.status()).toBe(400);
+  expect(Object.keys((await invalid.json()).error.details).sort()).toEqual([
+    'description',
+    'title',
+  ]);
+  const ok = await ownerA.post('/api/requests', {
+    data: {
+      clientId: f.clientA1,
+      typeId: f.typeA,
+      title: 'Campanha de aniversário da loja',
+      description: 'Texto de teste ok',
+    },
+  });
+  expect(ok.status()).toBe(200);
+  const dup = await ownerA.post('/api/requests', {
+    data: {
+      clientId: f.clientA1,
+      typeId: f.typeA,
+      title: 'campanha aniversario loja',
+      description: 'Texto de teste ok',
+    },
+  });
+  expect(dup.status()).toBe(409);
+  expect((await dup.json()).error.details.duplicates[0]).toContain(
+    'Campanha de aniversário da loja',
+  );
+  const forced = await ownerA.post('/api/requests', {
+    data: {
+      clientId: f.clientA1,
+      typeId: f.typeA,
+      title: 'campanha aniversario loja',
+      description: 'Texto de teste ok',
+      force: true,
+    },
+  });
+  expect(forced.status()).toBe(200);
+  const noOrigin = await request.newContext({ baseURL: BASE });
+  await noOrigin.post('/api/auth/login', {
+    data: { email: 'dona.a@example.test', password: 'senha-de-teste-e2e-123' },
+    headers: { Origin: BASE },
+  });
+  expect(
+    (
+      await noOrigin.post('/api/requests', {
+        data: {
+          clientId: f.clientA1,
+          typeId: f.typeA,
+          title: 'Sem origem do navegador',
+          description: 'Texto de teste',
+        },
+      })
+    ).status(),
+  ).toBe(403);
+  await noOrigin.dispose();
+  expect((await ownerA.get('/api/requests?status=invalido')).status()).toBe(400);
+  expect((await ownerA.get("/api/requests?q='%20OR%201=1%20--")).status()).toBe(200);
+});
