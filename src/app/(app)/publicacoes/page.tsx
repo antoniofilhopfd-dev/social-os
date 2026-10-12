@@ -122,7 +122,7 @@ export default async function PublicationsPage({
                 {g.title}{' '}
                 <Badge tone={g.key === 'overdue' ? 'danger' : 'neutral'}>{g.items.length}</Badge>
               </h2>
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0}>
                 <table className="table">
                   <caption className="sr-only">{g.title}</caption>
                   <thead>

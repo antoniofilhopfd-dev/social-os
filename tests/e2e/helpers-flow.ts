@@ -40,3 +40,15 @@ export async function approvedContent(
   await client.dispose();
   return { contentId: c.id as string, owner };
 }
+
+/** Conteúdo aprovado → programado → marcado como publicado (agora). */
+export async function publishedContent(title: string) {
+  const { contentId, owner } = await approvedContent(title);
+  const pub = await (
+    await owner.post(`/api/contents/${contentId}/publication`, { data: { date: '2099-01-10' } })
+  ).json();
+  await owner.post(`/api/publications/${pub.id}/published`, {
+    data: { postUrl: 'https://www.instagram.com/p/teste/' },
+  });
+  return { contentId, publicationId: pub.id as string, owner };
+}

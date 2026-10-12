@@ -45,7 +45,7 @@ export default async function ApprovalsPage({
   const pending = data.items.filter((i) => i.status === 'pending');
   const rest = data.items.filter((i) => i.status !== 'pending');
   const table = (items: typeof data.items, caption: string) => (
-    <div className="table-wrap">
+    <div className="table-wrap" tabIndex={0}>
       <table className="table">
         <caption className="sr-only">{caption}</caption>
         <thead>

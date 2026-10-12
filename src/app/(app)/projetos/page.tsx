@@ -82,7 +82,7 @@ export default async function ProjectsPage({
           description="Crie um projeto para agrupar tarefas e conteúdos de uma entrega."
         />
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table className="table">
             <caption className="sr-only">Lista de projetos</caption>
             <thead>

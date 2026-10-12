@@ -9,6 +9,10 @@ import { FORMAT_LABELS } from '@/modules/contents/rules';
 import { NETWORK_LABELS } from '@/modules/requests/labels';
 import { PUBLICATION_STATUS_LABELS } from '@/modules/publications/rules';
 import { getPublication } from '@/modules/publications/service';
+import { can } from '@/core/auth/context';
+import { todayLocal } from '@/core/time';
+import { listPublicationMetrics } from '@/modules/metrics/service';
+import { MetricsPanel } from '../../resultados/metrics-form';
 import { Alert, Badge } from '@/ui/components';
 import { Forbidden } from '@/ui/forbidden';
 import { CopyButton, PublicationActions } from '../actions';
@@ -36,6 +40,9 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
     throw e;
   }
   const pk = p.package;
+  const showMetrics =
+    p.status === 'published' && ctx.grants.some((g) => g.permissions.has('metrics:view'));
+  const entries = showMetrics ? await listPublicationMetrics(getDb(), ctx, id) : [];
   return (
     <>
       <p>
@@ -157,6 +164,29 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
           </div>
         )}
       </section>
+
+      {showMetrics && (
+        <MetricsPanel
+          publicationId={p.id}
+          canCreate={can(ctx, 'metrics:create', p.content.clientId)}
+          publishedDay={p.publishedAt ? todayLocal(p.publishedAt) : ''}
+          entries={entries.map((e) => ({
+            id: e.id,
+            capturedOn: e.capturedOn,
+            values: {
+              reach: e.reach,
+              impressions: e.impressions,
+              clicks: e.clicks,
+              videoViews: e.videoViews,
+            },
+            interactions: e.interactions,
+            engagementRate: e.engagementRate,
+            notes: e.notes,
+            createdByName: e.createdByName,
+            canEdit: e.canEdit,
+          }))}
+        />
+      )}
 
       <section className="section stack" aria-labelledby="pb-hist">
         <h2 id="pb-hist">Histórico</h2>

@@ -112,6 +112,17 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['POST', '/api/assets'],
   ['GET', `/api/asset-folders?clientId=${f.clientA1}`],
   ['POST', '/api/asset-folders'],
+  // Etapa 10
+  ['GET', '/api/metrics/performance?from=2031-01-01&to=2031-01-31'],
+  ['GET', '/api/metrics/operations?from=2031-01-01&to=2031-01-31'],
+  ['GET', '/api/metrics/export?from=2031-01-01&to=2031-01-31'],
+  ['GET', `/api/publications/${ID}/metrics`],
+  ['POST', `/api/publications/${ID}/metrics`],
+  ['PATCH', `/api/metrics/entries/${ID}`],
+  ['DELETE', `/api/metrics/entries/${ID}`],
+  ['GET', `/api/profile-snapshots?profileId=${ID}`],
+  ['POST', '/api/profile-snapshots'],
+  ['DELETE', `/api/profile-snapshots/${ID}`],
   // Etapa 09
   ['GET', '/api/publications'],
   ['GET', `/api/publications/${ID}`],
@@ -1013,4 +1024,125 @@ test('estágio 9: publicações isoladas; cliente externo não acessa; links per
   ).toBe(400);
   expect((await a.get('/api/publications/nao-e-id')).status()).toBe(404);
   await a.dispose();
+});
+
+test('estágio 10: métricas isoladas; cliente só lê o próprio; exportação restrita; entradas inválidas recusadas', async () => {
+  const { publishedContent } = await import('./helpers-flow');
+  const { publicationId, owner } = await publishedContent('Métrica isolada');
+  const today = new Date().toISOString().slice(0, 10);
+  const rec = await owner.post(`/api/publications/${publicationId}/metrics`, {
+    data: {
+      capturedOn: today,
+      reach: 1200,
+      impressions: 1500,
+      likes: 80,
+      comments: 6,
+      shares: 4,
+      saves: 10,
+    },
+  });
+  expect(rec.status()).toBe(200);
+  const { id: entryId } = await rec.json();
+  // validações
+  expect(
+    (
+      await owner.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: today },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await owner.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: today, reach: -1 },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await owner.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: today, reach: 1.5 },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await owner.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: today, reach: 100, impressions: 10 },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await owner.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: '2099-01-01', reach: 1 },
+      })
+    ).status(),
+  ).toBe(400);
+  expect((await owner.get('/api/metrics/performance?from=2031-02-01&to=2031-01-01')).status()).toBe(
+    400,
+  );
+  expect((await owner.get('/api/metrics/performance?from=2020-01-01&to=2031-01-01')).status()).toBe(
+    400,
+  );
+  expect((await owner.get('/api/metrics/performance')).status()).toBe(400);
+  // relatório e exportação
+  const rep = await (await owner.get(`/api/metrics/performance?from=${today}&to=${today}`)).json();
+  expect(rep.totals.reach).toBeGreaterThanOrEqual(1200);
+  const csv = await owner.get(`/api/metrics/export?from=${today}&to=${today}`);
+  expect(csv.status()).toBe(200);
+  expect(csv.headers()['content-type']).toContain('text/csv');
+  expect(csv.headers()['content-disposition']).toContain('attachment');
+  expect(await csv.text()).toContain('Métrica isolada');
+  // org B não alcança
+  for (const [m, url, data] of [
+    ['GET', `/api/publications/${publicationId}/metrics`],
+    ['POST', `/api/publications/${publicationId}/metrics`, { capturedOn: today, reach: 1 }],
+    ['PATCH', `/api/metrics/entries/${entryId}`, { reach: 1 }],
+    ['DELETE', `/api/metrics/entries/${entryId}`],
+  ] as [string, string, unknown?][]) {
+    const r = await ownerB.fetch(url, { method: m, data: data ?? {} });
+    expect(r.status(), `${m} ${url}`).toBe(404);
+  }
+  expect(
+    (await (await ownerB.get(`/api/metrics/performance?from=${today}&to=${today}`)).json()).totals
+      .posts,
+  ).toBe(0);
+  expect(
+    JSON.stringify(
+      await (await ownerB.get(`/api/metrics/export?from=${today}&to=${today}`)).text(),
+    ),
+  ).not.toContain('Métrica isolada');
+  // cliente externo: lê relatório do próprio cliente, não exporta, não registra, não vê operação
+  const ext = await apiLogin('cliente.a1@example.test');
+  const mine = await (await ext.get(`/api/metrics/performance?from=${today}&to=${today}`)).json();
+  expect(JSON.stringify(mine)).toContain('Métrica isolada');
+  expect((await ext.get(`/api/metrics/export?from=${today}&to=${today}`)).status()).toBe(403);
+  expect((await ext.get(`/api/metrics/operations?from=${today}&to=${today}`)).status()).toBe(403);
+  expect(
+    (
+      await ext.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: today, reach: 1 },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (await ext.patch(`/api/metrics/entries/${entryId}`, { data: { reach: 1 } })).status(),
+  ).toBe(403);
+  await ext.dispose();
+  // consulta (viewer, A1) lê, mas não registra nem exporta
+  const viewer = await apiLogin('consulta.a1@example.test');
+  expect((await viewer.get(`/api/publications/${publicationId}/metrics`)).status()).toBe(200);
+  expect(
+    (
+      await viewer.post(`/api/publications/${publicationId}/metrics`, {
+        data: { capturedOn: today, reach: 1 },
+      })
+    ).status(),
+  ).toBe(403);
+  expect((await viewer.get(`/api/metrics/export?from=${today}&to=${today}`)).status()).toBe(403);
+  await viewer.dispose();
+  // exclusão remove do relatório
+  expect((await owner.delete(`/api/metrics/entries/${entryId}`)).status()).toBe(200);
+  await owner.dispose();
 });

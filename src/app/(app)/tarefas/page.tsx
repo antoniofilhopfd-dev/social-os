@@ -202,7 +202,7 @@ export default async function TasksPage({
           })}
         </div>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table className="table">
             <caption className="sr-only">Lista de tarefas</caption>
             <thead>

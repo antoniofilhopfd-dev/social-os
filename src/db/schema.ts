@@ -713,3 +713,41 @@ export const publicationEvents = mysqlTable('publication_events', {
   metadata: json('metadata').$type<Record<string, unknown>>(),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------- resultados
+export const metricEntries = mysqlTable('metric_entries', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  publicationId: id('publication_id').notNull(),
+  capturedOn: date('captured_on', { mode: 'string' }).notNull(),
+  reach: int('reach', { unsigned: true }),
+  impressions: int('impressions', { unsigned: true }),
+  likes: int('likes', { unsigned: true }),
+  comments: int('comments', { unsigned: true }),
+  shares: int('shares', { unsigned: true }),
+  saves: int('saves', { unsigned: true }),
+  clicks: int('clicks', { unsigned: true }),
+  videoViews: int('video_views', { unsigned: true }),
+  followersGained: int('followers_gained', { unsigned: true }),
+  source: mysqlEnum('source', ['manual', 'api']).notNull().default('manual'),
+  notes: varchar('notes', { length: 1000 }),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+});
+
+export const profileSnapshots = mysqlTable('profile_snapshots', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  socialProfileId: id('social_profile_id').notNull(),
+  capturedOn: date('captured_on', { mode: 'string' }).notNull(),
+  followers: int('followers', { unsigned: true }).notNull(),
+  source: mysqlEnum('source', ['manual', 'api']).notNull().default('manual'),
+  createdBy: id('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  deletedAt: ts('deleted_at'),
+  /** perfil+dia enquanto ativo: garante um registro por perfil e dia. */
+  activeKey: varchar('active_key', { length: 40 }),
+});

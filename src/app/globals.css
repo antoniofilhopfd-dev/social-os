@@ -995,3 +995,47 @@ del {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Resultados */
+.kpis {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+.stat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat strong {
+  font-size: 1.5rem;
+  color: var(--color-navy);
+}
+.stat span {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+@media print {
+  .print-report ~ *,
+  nav,
+  header,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .section,
+  .stat {
+    break-inside: avoid;
+  }
+}
+
+.kv dd,
+.kv dt {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
