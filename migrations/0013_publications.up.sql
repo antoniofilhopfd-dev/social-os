@@ -1,0 +1,41 @@
+CREATE TABLE publications (
+  id CHAR(26) NOT NULL PRIMARY KEY,
+  organization_id CHAR(26) NOT NULL,
+  client_id CHAR(26) NOT NULL,
+  content_id CHAR(26) NOT NULL,
+  social_profile_id CHAR(26) NOT NULL,
+  status ENUM('scheduled','published','failed','cancelled') NOT NULL DEFAULT 'scheduled',
+  active_key CHAR(26) NULL,
+  scheduled_date DATE NOT NULL,
+  scheduled_time TIME NULL,
+  published_at TIMESTAMP(3) NULL,
+  post_url VARCHAR(500) NULL,
+  failure_reason VARCHAR(1000) NULL,
+  notes VARCHAR(2000) NULL,
+  created_by CHAR(26) NULL,
+  updated_by CHAR(26) NULL,
+  created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uq_publications_active (active_key),
+  KEY ix_publications_org (organization_id, status, scheduled_date),
+  KEY ix_publications_content (content_id),
+  CONSTRAINT fk_publications_org FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  CONSTRAINT fk_publications_client FOREIGN KEY (client_id) REFERENCES clients(id),
+  CONSTRAINT fk_publications_content FOREIGN KEY (content_id) REFERENCES contents(id),
+  CONSTRAINT fk_publications_profile FOREIGN KEY (social_profile_id) REFERENCES social_profiles(id),
+  CONSTRAINT fk_publications_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_publications_updater FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE publication_events (
+  id CHAR(26) NOT NULL PRIMARY KEY,
+  organization_id CHAR(26) NOT NULL,
+  publication_id CHAR(26) NOT NULL,
+  actor_user_id CHAR(26) NULL,
+  kind VARCHAR(40) NOT NULL,
+  metadata JSON NULL,
+  created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  KEY ix_publication_events (publication_id, created_at),
+  CONSTRAINT fk_publication_events_pub FOREIGN KEY (publication_id) REFERENCES publications(id) ON DELETE CASCADE,
+  CONSTRAINT fk_publication_events_actor FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

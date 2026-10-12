@@ -679,3 +679,37 @@ export const approvalComments = mysqlTable('approval_comments', {
   body: text('body').notNull(),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+// -------------------------------------------------------------- publicações
+export const PUBLICATION_STATUSES = ['scheduled', 'published', 'failed', 'cancelled'] as const;
+
+export const publications = mysqlTable('publications', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  contentId: id('content_id').notNull(),
+  socialProfileId: id('social_profile_id').notNull(),
+  status: mysqlEnum('status', PUBLICATION_STATUSES).notNull().default('scheduled'),
+  /** = contentId enquanto programada; garante uma única programação ativa por conteúdo. */
+  activeKey: id('active_key'),
+  scheduledDate: date('scheduled_date', { mode: 'string' }).notNull(),
+  scheduledTime: time('scheduled_time'),
+  publishedAt: ts('published_at'),
+  postUrl: varchar('post_url', { length: 500 }),
+  failureReason: varchar('failure_reason', { length: 1000 }),
+  notes: varchar('notes', { length: 2000 }),
+  createdBy: id('created_by'),
+  updatedBy: id('updated_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const publicationEvents = mysqlTable('publication_events', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  publicationId: id('publication_id').notNull(),
+  actorUserId: id('actor_user_id'),
+  kind: varchar('kind', { length: 40 }).notNull(),
+  metadata: json('metadata').$type<Record<string, unknown>>(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});

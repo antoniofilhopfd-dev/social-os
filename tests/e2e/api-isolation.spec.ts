@@ -112,6 +112,14 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['POST', '/api/assets'],
   ['GET', `/api/asset-folders?clientId=${f.clientA1}`],
   ['POST', '/api/asset-folders'],
+  // Etapa 09
+  ['GET', '/api/publications'],
+  ['GET', `/api/publications/${ID}`],
+  ['PATCH', `/api/publications/${ID}`],
+  ['POST', `/api/publications/${ID}/published`],
+  ['POST', `/api/publications/${ID}/failed`],
+  ['POST', `/api/publications/${ID}/cancel`],
+  ['POST', `/api/contents/${f.contentA1}/publication`],
   // Etapa 08
   ['GET', '/api/approvals'],
   ['GET', `/api/approvals/${f.approvalA}`],
@@ -947,4 +955,62 @@ test('estágio 8: aprovações isoladas por organização/cliente; cliente não 
   expect(content.brief).toBeNull();
   expect(content.assigneeUserId).toBeNull();
   await ext.dispose();
+});
+
+test('estágio 9: publicações isoladas; cliente externo não acessa; links perigosos recusados', async () => {
+  const { approvedContent } = await import('./helpers-flow');
+  const f = fx();
+  const { contentId, owner } = await approvedContent('Publicação isolada');
+  const res = await owner.post(`/api/contents/${contentId}/publication`, {
+    data: { date: '2099-01-10', time: '10:00' },
+  });
+  expect(res.status()).toBe(200);
+  const { id } = await res.json();
+  await owner.dispose();
+  for (const [m, url, data] of [
+    ['GET', `/api/publications/${id}`],
+    ['PATCH', `/api/publications/${id}`, { date: '2099-02-01' }],
+    ['POST', `/api/publications/${id}/published`, {}],
+    ['POST', `/api/publications/${id}/failed`, { reason: 'invasão' }],
+    ['POST', `/api/publications/${id}/cancel`],
+    ['POST', `/api/contents/${contentId}/publication`, { date: '2099-03-01' }],
+  ] as [string, string, unknown?][]) {
+    const r = await ownerB.fetch(url, { method: m, data: data ?? {} });
+    expect(r.status(), `${m} ${url}`).toBe(404);
+  }
+  expect(JSON.stringify(await (await ownerB.get('/api/publications')).json())).not.toContain(id);
+  const ext = await apiLogin('cliente.a1@example.test');
+  expect((await ext.get('/api/publications')).status()).toBe(403);
+  expect((await ext.get(`/api/publications/${id}`)).status()).toBe(403);
+  expect(
+    (
+      await ext.post(`/api/contents/${contentId}/publication`, { data: { date: '2099-03-01' } })
+    ).status(),
+  ).toBe(403);
+  await ext.dispose();
+  const scoped = await apiLogin('consulta.a1@example.test');
+  expect((await scoped.get(`/api/publications/${id}`)).status()).toBe(200);
+  expect((await scoped.post(`/api/publications/${id}/published`, { data: {} })).status()).toBe(403);
+  await scoped.dispose();
+  const a = await apiLogin('dona.a@example.test');
+  expect(
+    (
+      await a.post(`/api/publications/${id}/published`, {
+        data: { postUrl: 'javascript:alert(1)' },
+      })
+    ).status(),
+  ).toBe(400);
+  expect((await a.post(`/api/publications/${id}/failed`, { data: { reason: '' } })).status()).toBe(
+    400,
+  );
+  expect(
+    (await a.patch(`/api/publications/${id}`, { data: { date: '2000-01-01' } })).status(),
+  ).toBe(400);
+  expect(
+    (
+      await a.post(`/api/contents/${f.contentA1}/publication`, { data: { date: 'ontem' } })
+    ).status(),
+  ).toBe(400);
+  expect((await a.get('/api/publications/nao-e-id')).status()).toBe(404);
+  await a.dispose();
 });

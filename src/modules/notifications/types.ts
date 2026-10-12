@@ -60,6 +60,14 @@ export const NOTIFICATION_TYPES = {
     label: 'Comentário em aprovação',
     description: 'Quando alguém comenta em uma aprovação de que você participa.',
   },
+  publication_scheduled: {
+    label: 'Publicação programada',
+    description: 'Quando um conteúdo seu é programado para publicação.',
+  },
+  publication_failed: {
+    label: 'Falha ao publicar',
+    description: 'Quando o registro de uma publicação informa falha.',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

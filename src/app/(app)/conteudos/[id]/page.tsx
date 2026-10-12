@@ -22,6 +22,8 @@ import { listContentAssets } from '@/modules/library/service';
 import { EditorPanel } from './editor-panel';
 import { listContentApprovals } from '@/modules/approvals/service';
 import { ApprovalPanel } from './approval-panel';
+import { PublicationPanel } from './publication-panel';
+import { listPublications } from '@/modules/publications/service';
 import { ContentForm } from '../content-form';
 import { ContentActions } from './content-actions';
 import { HistoryList } from './history-list';
@@ -59,9 +61,14 @@ export default async function ContentPage({
           aba === 'aprovacao' &&
           ctx.grants.some((g) => g.permissions.has('approvals:view'))
         ? 'aprovacao'
-        : aba === 'historico' && editable
-          ? 'historico'
-          : 'dados';
+        : editable &&
+            internal &&
+            aba === 'publicacao' &&
+            ctx.grants.some((g) => g.permissions.has('publications:view'))
+          ? 'publicacao'
+          : aba === 'historico' && editable
+            ? 'historico'
+            : 'dados';
   const [clients, pillars, assignees] = editable
     ? await Promise.all([
         listClients(db, ctx),
@@ -72,6 +79,10 @@ export default async function ContentPage({
   const history = tab === 'historico' ? await listContentHistory(db, ctx, id) : [];
   const editor = tab === 'editor' ? await getEditor(db, ctx, id) : null;
   const rounds = tab === 'aprovacao' ? await listContentApprovals(db, ctx, id) : [];
+  const pubs =
+    tab === 'publicacao'
+      ? (await listPublications(db, ctx, { contentId: id, limit: 50 })).items
+      : [];
   const blocks = editor ? await listBlocks(db, ctx) : [];
   const linked = editor ? await listContentAssets(db, ctx, id) : [];
   const targets = MANUAL_TRANSITIONS[c.status] ?? [];
@@ -144,6 +155,15 @@ export default async function ContentPage({
               Aprovação
             </Link>
           )}
+          {internal && ctx.grants.some((g) => g.permissions.has('publications:view')) && (
+            <Link
+              href={`/conteudos/${id}?aba=publicacao`}
+              className={`btn btn-sm ${tab === 'publicacao' ? 'btn-primary' : 'btn-secondary'}`}
+              aria-current={tab === 'publicacao' ? 'page' : undefined}
+            >
+              Publicação
+            </Link>
+          )}
           <Link
             href={`/conteudos/${id}?aba=historico`}
             className={`btn btn-sm ${tab === 'historico' ? 'btn-primary' : 'btn-secondary'}`}
@@ -154,7 +174,22 @@ export default async function ContentPage({
         </nav>
       )}
 
-      {tab === 'aprovacao' ? (
+      {tab === 'publicacao' ? (
+        <PublicationPanel
+          contentId={id}
+          status={c.status}
+          hasProfile={!!c.socialProfileId}
+          canSchedule={can(ctx, 'publications:create', c.clientId)}
+          canWaive={can(ctx, 'contents:approve', c.clientId)}
+          items={pubs.map((p) => ({
+            id: p.id,
+            status: p.status,
+            scheduledDate: p.scheduledDate,
+            scheduledTime: p.scheduledTime,
+            publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+          }))}
+        />
+      ) : tab === 'aprovacao' ? (
         <ApprovalPanel
           contentId={id}
           status={c.status}

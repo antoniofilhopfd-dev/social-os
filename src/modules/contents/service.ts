@@ -38,6 +38,7 @@ import {
 } from '@/core/auth/context';
 import { AppError } from '@/core/errors';
 import { newId } from '@/core/ids';
+import { todayLocal } from '@/core/time';
 import { assertInternalMember, likePattern } from '@/modules/clients/service';
 import { notify } from '@/modules/notifications/service';
 import type { CreateContentInput, UpdateContentInput } from './schema';
@@ -49,7 +50,6 @@ import {
   RESERVED_STATUSES,
   canTransitionManually,
   formatFromRequest,
-  isoDate,
   scheduleState,
   type ContentStatus,
 } from './rules';
@@ -212,7 +212,7 @@ export async function listContents(
   now = new Date(),
 ) {
   requireAnyScope(ctx, 'contents:view');
-  const today = isoDate(now);
+  const today = todayLocal(now);
   const limit = f.limit ?? CONTENTS_PAGE_SIZE;
   const rows = await db
     .select({
@@ -320,7 +320,7 @@ export async function getContent(db: Db, ctx: Ctx, id: string, now = new Date())
     status: c.status,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
-    schedule: scheduleState({ status: c.status, scheduledDate: c.scheduledDate }, isoDate(now)),
+    schedule: scheduleState({ status: c.status, scheduledDate: c.scheduledDate }, todayLocal(now)),
     conflicts,
     permissions: {
       edit: can(ctx, 'contents:edit', c.clientId) && isInternal(ctx),

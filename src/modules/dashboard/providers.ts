@@ -6,6 +6,7 @@ import { listContents } from '@/modules/contents/service';
 import { listRequests } from '@/modules/requests/service';
 import { listTasks } from '@/modules/tasks/service';
 import { listApprovals } from '@/modules/approvals/service';
+import { listPublications } from '@/modules/publications/service';
 
 export type Severity = 'alert' | 'info';
 
@@ -326,8 +327,49 @@ const approvalAttention: PendingProvider = {
   },
 };
 
+const publicationAttention: PendingProvider = {
+  id: 'publications.attention',
+  allowed: (ctx) =>
+    ctx.userKind === 'internal' && ctx.grants.some((g) => g.permissions.has('publications:view')),
+  async collect(db, ctx, f) {
+    const { items } = await listPublications(
+      db,
+      ctx,
+      { status: 'scheduled', clientId: f.clientId, limit: 200 },
+      f.now,
+    );
+    const out: PendingItem[] = [];
+    for (const p of items) {
+      const base = {
+        id: `publication:${p.id}`,
+        kind: 'publication',
+        href: `/publicacoes/${p.id}`,
+        clientId: p.clientId,
+        clientName: p.clientName,
+      };
+      const when = `${p.scheduledDate.split('-').reverse().join('/')}${p.scheduledTime ? ` ${p.scheduledTime}` : ''}`;
+      if (p.queue === 'overdue')
+        out.push({
+          ...base,
+          severity: 'alert',
+          title: `Publicação atrasada: #${p.contentNumber} ${p.title}`,
+          detail: `${p.clientName} · prevista para ${when}`,
+        });
+      else if (p.queue === 'today')
+        out.push({
+          ...base,
+          severity: 'info',
+          title: `Publicar hoje: #${p.contentNumber} ${p.title}`,
+          detail: `${p.clientName} · ${p.scheduledTime ?? 'sem horário'}`,
+        });
+    }
+    return out.slice(0, 30);
+  },
+};
+
 export const PENDING_PROVIDERS: PendingProvider[] = [
   requestAttention,
+  publicationAttention,
   approvalAttention,
   taskAttention,
   contentAttention,

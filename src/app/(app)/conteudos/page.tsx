@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getDb } from '@/db';
 import { can } from '@/core/auth/context';
 import { requireAuthPage } from '@/core/auth/server';
+import { todayLocal } from '@/core/time';
 import { listClients } from '@/modules/clients/service';
 import { listCampaigns } from '@/modules/contents/campaigns';
 import { listBrands } from '@/modules/clients/children';
@@ -13,7 +14,6 @@ import {
   CONTENT_STATUS_LABELS,
   FORMAT_LABELS,
   addDays,
-  isoDate,
   monthRange,
   shiftMonth,
   weekDays,
@@ -44,7 +44,7 @@ export default async function ContentsPage({
   const f = parsed.success ? parsed.data : {};
   const view = f.view ?? 'calendario';
   const now = new Date();
-  const today = isoDate(now);
+  const today = todayLocal(now);
   const ym = f.mes ?? today.slice(0, 7);
   const day = f.dia ?? today;
   const db = getDb();

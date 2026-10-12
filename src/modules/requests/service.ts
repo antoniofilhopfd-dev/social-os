@@ -23,6 +23,7 @@ import {
 } from '@/core/auth/context';
 import { AppError } from '@/core/errors';
 import { newId } from '@/core/ids';
+import { todayLocal } from '@/core/time';
 import { assertInternalMember, likePattern } from '@/modules/clients/service';
 import { notify } from '@/modules/notifications/service';
 import type { CreateRequestInput, UpdateRequestInput } from './schema';
@@ -179,7 +180,7 @@ export async function listRequests(db: Db, ctx: Ctx, f: ListFilters = {}, now = 
     );
   }
   if (f.overdue) {
-    const today = now.toISOString().slice(0, 10);
+    const today = todayLocal(now);
     where.push(
       or(
         and(

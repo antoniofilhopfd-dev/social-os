@@ -15,6 +15,7 @@ import { audit } from '@/core/audit';
 import { can, clientScope, requireAnyScope, type Ctx } from '@/core/auth/context';
 import { AppError } from '@/core/errors';
 import { newId } from '@/core/ids';
+import { todayLocal } from '@/core/time';
 import { assertInternalMember, likePattern } from '@/modules/clients/service';
 import { visibleContents } from '@/modules/contents/service';
 import { notify } from '@/modules/notifications/service';
@@ -29,7 +30,7 @@ import {
 export const TASKS_PAGE_SIZE = 50;
 const nf = (what = 'Tarefa') => new AppError('NOT_FOUND', `${what} não encontrada.`);
 const forbidden = () => new AppError('FORBIDDEN', 'Você não tem permissão para esta ação.');
-const todayIso = (now = new Date()) => now.toISOString().slice(0, 10);
+const todayIso = (now = new Date()) => todayLocal(now);
 
 function internalOnly(ctx: Ctx) {
   if (ctx.userKind !== 'internal') throw forbidden();
