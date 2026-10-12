@@ -1,7 +1,16 @@
 import { and, eq, isNull, like, ne, or } from 'drizzle-orm';
 import type { Db } from '@/db';
-import { clients, invitations, memberships, roles, sessions, users } from '@/db/schema';
+import {
+  clients,
+  invitations,
+  memberships,
+  recoveryCodes,
+  roles,
+  sessions,
+  users,
+} from '@/db/schema';
 import { audit } from '@/core/audit';
+import { revokeAllSessions } from '@/core/auth/session';
 import { assertCanGrant, requireOrgWide, type Ctx } from '@/core/auth/context';
 import { randomToken, sha256Hex } from '@/core/crypto';
 import { isDuplicateEntry } from '@/core/db';
@@ -53,6 +62,7 @@ export async function listTeam(db: Db, ctx: Ctx, opts: { q?: string } = {}) {
       kind: users.kind,
       status: users.status,
       lastLoginAt: users.lastLoginAt,
+      twoFactorAt: users.totpEnabledAt,
     })
     .from(memberships)
     .innerJoin(users, eq(users.id, memberships.userId))
@@ -356,4 +366,53 @@ export async function createResetLinkForMember(db: Db, ctx: Ctx, userId: string)
     ip: ctx.ip,
   });
   return reset;
+}
+
+/** Remove o 2FA de um membro que perdeu o aparelho e os códigos de recuperação. Mesmas travas de escalada de privilégio da redefinição de senha. */
+export async function resetTwoFactorForMember(db: Db, ctx: Ctx, userId: string) {
+  requireOrgWide(ctx, 'team:manage_users');
+  if (userId === ctx.userId)
+    throw new AppError(
+      'FORBIDDEN',
+      'Para a sua própria conta, desative o 2FA em “Segurança da conta”.',
+    );
+  const rows = await db
+    .select({ roleId: memberships.roleId })
+    .from(memberships)
+    .where(and(eq(memberships.organizationId, ctx.organizationId), eq(memberships.userId, userId)));
+  if (rows.length === 0) throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
+  const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!target || target.isPlatformAdmin === 1)
+    throw new AppError('FORBIDDEN', 'Esta conta não pode ser alterada por aqui.');
+  if (!target.totpEnabledAt)
+    throw new AppError('CONFLICT', 'Esta pessoa não usa verificação em duas etapas.');
+  const perms = await permissionsOfRoles(
+    db,
+    rows.map((r) => r.roleId),
+  );
+  for (const set of perms.values()) assertCanGrant(ctx, set);
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null })
+      .where(eq(users.id, userId));
+    await tx.delete(recoveryCodes).where(eq(recoveryCodes.userId, userId));
+  });
+  await revokeAllSessions(db, userId);
+  await notify(db, {
+    organizationId: ctx.organizationId,
+    userId,
+    type: 'password_reset_issued',
+    title: 'Um administrador removeu a verificação em duas etapas da sua conta',
+    body: 'Se você não pediu isso, avise a administração. Ative o 2FA novamente em “Segurança da conta”.',
+    link: '/seguranca',
+  });
+  await audit(db, {
+    organizationId: ctx.organizationId,
+    actorUserId: ctx.userId,
+    action: 'user.2fa_reset',
+    entityType: 'user',
+    entityId: userId,
+    ip: ctx.ip,
+  });
 }

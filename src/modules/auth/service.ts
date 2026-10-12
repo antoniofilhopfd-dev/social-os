@@ -16,6 +16,7 @@ import { newId } from '@/core/ids';
 import { burnVerification, hashPassword, validatePassword, verifyPassword } from '@/core/password';
 import { assertLoginAllowed, assertTokenAllowed, recordAttempt } from '@/core/rate-limit';
 import { notify } from '@/modules/notifications/service';
+import { verifySecondFactor } from './twofactor';
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const RESET_TTL_MS = 24 * 60 * 60 * 1000;
@@ -32,7 +33,7 @@ export interface Origin {
 
 export async function login(
   db: Db,
-  input: { email: string; password: string } & Origin,
+  input: { email: string; password: string; code?: string } & Origin,
   now = new Date(),
 ) {
   const email = normalizeEmail(input.email);
@@ -59,6 +60,29 @@ export async function login(
     throw BAD_LOGIN();
   }
 
+  // segundo fator: a senha correta sozinha não abre a sessão de quem ativou 2FA
+  if (user.totpEnabledAt) {
+    if (!input.code?.trim()) return { twoFactorRequired: true as const };
+    const method = await verifySecondFactor(db, user, input.code, now);
+    if (!method) {
+      await recordAttempt(db, 'login', email, input.ip, false);
+      await audit(db, {
+        organizationId: await defaultOrganizationId(db, user.id),
+        actorUserId: user.id,
+        action: 'auth.2fa_failed',
+        ip: input.ip,
+      });
+      throw new AppError('UNAUTHENTICATED', 'Código inválido ou expirado.');
+    }
+    if (method === 'recovery')
+      await audit(db, {
+        organizationId: await defaultOrganizationId(db, user.id),
+        actorUserId: user.id,
+        action: 'auth.2fa_recovery_used',
+        ip: input.ip,
+      });
+  }
+
   const organizationId = await defaultOrganizationId(db, user.id);
   if (!organizationId && user.isPlatformAdmin !== 1) {
     throw new AppError('FORBIDDEN', 'Sua conta ainda não está vinculada a nenhuma organização.');
@@ -80,7 +104,12 @@ export async function login(
     entityId: session.sessionId,
     ip: input.ip,
   });
-  return { token: session.token, expiresAt: session.expiresAt, userId: user.id };
+  return {
+    twoFactorRequired: false as const,
+    token: session.token,
+    expiresAt: session.expiresAt,
+    userId: user.id,
+  };
 }
 
 export async function logout(db: Db, ctx: Ctx): Promise<void> {

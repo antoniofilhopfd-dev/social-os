@@ -12,7 +12,7 @@ function routeFiles(dir: string): string[] {
 }
 
 // Únicas rotas que podem ser acessadas sem sessão. Qualquer outra rota nova DEVE usar `route()`.
-const PUBLIC_ALLOWLIST = ['auth/login', 'auth/accept-invite', 'auth/reset-password'];
+const PUBLIC_ALLOWLIST = ['auth/login', 'auth/accept-invite', 'auth/reset-password', 'health'];
 
 describe('guarda estrutural das rotas de API', () => {
   const files = routeFiles(API_DIR);

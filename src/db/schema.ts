@@ -38,6 +38,9 @@ export const users = mysqlTable('users', {
   isPlatformAdmin: tinyint('is_platform_admin').notNull().default(0),
   status: mysqlEnum('status', ['active', 'disabled']).notNull().default('active'),
   lastLoginAt: ts('last_login_at'),
+  totpSecretEnc: varchar('totp_secret_enc', { length: 400 }),
+  totpEnabledAt: ts('totp_enabled_at'),
+  totpLastStep: bigint('totp_last_step', { mode: 'number', unsigned: true }),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
@@ -750,4 +753,12 @@ export const profileSnapshots = mysqlTable('profile_snapshots', {
   deletedAt: ts('deleted_at'),
   /** perfil+dia enquanto ativo: garante um registro por perfil e dia. */
   activeKey: varchar('active_key', { length: 40 }),
+});
+
+export const recoveryCodes = mysqlTable('recovery_codes', {
+  id: id().primaryKey(),
+  userId: id('user_id').notNull(),
+  codeHash: char('code_hash', { length: 64 }).notNull(),
+  usedAt: ts('used_at'),
+  createdAt: ts('created_at').notNull().defaultNow(),
 });

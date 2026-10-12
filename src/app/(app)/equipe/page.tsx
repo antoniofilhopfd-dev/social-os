@@ -45,6 +45,7 @@ export default async function TeamPage({
         members={team.members.map((m) => ({
           ...m,
           lastLoginAt: m.lastLoginAt?.toISOString() ?? null,
+          twoFactor: m.twoFactorAt !== null,
         }))}
         invitations={team.invitations.map((i) => ({ ...i, expiresAt: i.expiresAt.toISOString() }))}
         roles={roles}

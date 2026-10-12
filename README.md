@@ -50,3 +50,5 @@ npm run dev                 # http://localhost:3000
 - [docs/BACKUP.md](docs/BACKUP.md)
 
 - Editor de conteúdo e biblioteca de mídia: ver `docs/EDITOR-BIBLIOTECA.md` (`npm run assets:purge`, `MAX_UPLOAD_MB`).
+
+- Segurança, 2FA, backup/restauração e rotinas: `docs/SEGURANCA.md`, `docs/BACKUP.md`, `docs/OPERACAO.md`.

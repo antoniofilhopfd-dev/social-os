@@ -112,6 +112,13 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['POST', '/api/assets'],
   ['GET', `/api/asset-folders?clientId=${f.clientA1}`],
   ['POST', '/api/asset-folders'],
+  // Etapa 11
+  ['POST', `/api/team/users/${ID}/reset-2fa`],
+  ['GET', '/api/me/2fa'],
+  ['POST', '/api/me/2fa/setup'],
+  ['POST', '/api/me/2fa/enable'],
+  ['POST', '/api/me/2fa/disable'],
+  ['POST', '/api/me/2fa/recovery-codes'],
   // Etapa 10
   ['GET', '/api/metrics/performance?from=2031-01-01&to=2031-01-31'],
   ['GET', '/api/metrics/operations?from=2031-01-01&to=2031-01-31'],

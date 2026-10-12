@@ -46,7 +46,7 @@ Eventos: login, falha de login, logout, convite (criado/aceito/revogado), mudan�
 - **Limite de datas do MySQL:** as colunas `TIMESTAMP` só aceitam datas até 19/01/2038. Hoje não afeta nada (sessões e convites expiram em dias), mas **datas de planejamento editorial devem usar `DATETIME`** nas próximas etapas.
 - Notificações de remoção de vínculo e de sessão encerrada **não existem**, pois o destinatário perde o acesso à organização em que seriam exibidas.
 
-- **Sem 2FA/TOTP** (planejado para a Etapa 11).
+- **2FA por app autenticador (TOTP)** é opcional por usuário (não há política que o torne obrigatório para a organização) e não exibe QR code: a chave é mostrada para digitação/link `otpauth://`. Quem perde o aparelho e os códigos de recuperação é atendido por um administrador com `team:manage_users` (Equipe → “Remover 2FA”), com as mesmas travas de escalada de privilégio da redefinição de senha; as sessões da pessoa são encerradas e o evento é auditado.
 - **Bloqueio por e-mail pode ser usado para travar a conta de alguém por 15 min** (compromisso aceito; o limite por IP é independente).
 - O IP só é conhecido com `TRUST_PROXY=true` atrás de proxy confiável; sem isso todos compartilham o IP "unknown" (o limite por IP fica menos útil). **Defina conforme a hospedagem.**
 - A lista de senhas comuns é pequena e local; não consulta bases de vazamentos.
@@ -57,3 +57,24 @@ Eventos: login, falha de login, logout, convite (criado/aceito/revogado), mudan�
 - Administrador da plataforma existe como indicador e via `bootstrap`; **não há painel** e ele não acessa conteúdo de organizações.
 - A verificação de nome duplicado de cliente é feita na aplicação (corrida improvável entre duas criações simultâneas).
 - Exclusão de cliente é lógica; **não há tela de lixeira/recuperação** ainda.
+
+## Etapas 06–11: controles adicionados
+
+- **Arquivos (06):** tipo detectado pelo conteúdo; SVG/HTML/executáveis/polyglots recusados; chave de armazenamento só com IDs gerados; entrega com `nosniff`, `CSP: default-src 'none'; sandbox` e inline só para imagem/vídeo/PDF; cota por organização.
+- **Tarefas (07):** escopo por organização/cliente em toda consulta; tarefas sem cliente só com permissão na organização inteira; externos sem acesso.
+- **Aprovações (08):** decisão única com trava de linha; versão do texto e arquivos congelados na rodada; cliente nunca recebe observações internas, briefing nem responsável; arquivos de aprovação só pelo endpoint da rodada.
+- **Publicação (09):** uma programação ativa por conteúdo (índice único); links só http(s) sem credenciais; fuso `America/Sao_Paulo`.
+- **Resultados (10):** inteiros validados e “não informado ≠ zero”; exportação CSV neutraliza fórmulas, exige `metrics:export` e é auditada; cliente só lê o próprio relatório.
+- **2FA (11):** TOTP (RFC 6238, ±1 janela) com **anti-replay atômico**; segredo cifrado em repouso (AES-256-GCM com chave derivada de `APP_SECRET`); códigos de recuperação de uso único guardados só como hash; desativar/regenerar exigem senha + código e passam pelo mesmo limite de tentativas do login; falhas e usos de recuperação auditados.
+- **Operação (11):** `/api/health` sem detalhes internos; HSTS quando `APP_URL` é https; backup cifrado e restauração verificada (ver `docs/BACKUP.md`); limpeza periódica de sessões/links/tentativas vencidos.
+
+## Revisão de segurança desta etapa (resultado)
+
+Conferido por teste automatizado ou inspeção: CSP com nonce sem `unsafe-eval` em produção; `X-Frame-Options: DENY`; cookies `HttpOnly`/`SameSite=Lax`; CSRF por verificação de origem em toda mutação; todas as rotas protegidas respondem 401 sem sessão (lista exaustiva em `api-isolation.spec.ts`) e a guarda estrutural exige `route()`; 404 para recurso de outra organização; sem SQL montado por concatenação (Drizzle/parametrizado); logs sem segredos; `npm audit` sem vulnerabilidades.
+
+## Pendências de segurança (declaradas)
+
+- Política de 2FA obrigatório por organização.
+- QR code no cadastro do autenticador.
+- Varredura de antivírus em uploads (depende de serviço/binário externo — Etapa 12/13).
+- Teste de carga/resiliência em ambiente real (Etapa 13).

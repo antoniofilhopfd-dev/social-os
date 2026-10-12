@@ -10,6 +10,11 @@ const schema = z.object({
     .regex(/^mysql:\/\//)
     .optional(),
   STORAGE_DIR: z.string().min(1),
+  /** Segredo (≥ 32 caracteres) usado para cifrar segredos de 2FA em repouso. Obrigatório para ativar 2FA. */
+  APP_SECRET: z.string().min(32, 'use ao menos 32 caracteres').optional(),
+  /** Frase usada para cifrar backups (opcional; recomendado). */
+  BACKUP_PASSPHRASE: z.string().min(12, 'use ao menos 12 caracteres').optional(),
+  BACKUP_DIR: z.string().default('./backups'),
   /** 'true' somente se a aplicação está atrás de um proxy confiável que define X-Forwarded-For. */
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
 });

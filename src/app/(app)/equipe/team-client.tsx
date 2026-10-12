@@ -18,6 +18,7 @@ interface Member {
   scopeType: 'organization' | 'client';
   clientName: string | null;
   lastLoginAt: string | null;
+  twoFactor: boolean;
 }
 interface Invitation {
   id: string;
@@ -245,6 +246,17 @@ export function TeamClient(props: {
                         <Button variant="secondary" className="btn-sm" onClick={() => resetLink(m)}>
                           Link de nova senha
                         </Button>
+                      )}
+                      {props.can.reset && m.userId !== props.meId && m.twoFactor && (
+                        <ConfirmDialog
+                          triggerLabel="Remover 2FA"
+                          title={`Remover o 2FA de ${m.name}?`}
+                          description="Use quando a pessoa perdeu o aparelho e os códigos de recuperação. As sessões dela são encerradas e ela deverá ativar o 2FA novamente."
+                          confirmLabel="Remover 2FA"
+                          onConfirm={() =>
+                            act(() => api('POST', `/api/team/users/${m.userId}/reset-2fa`))
+                          }
+                        />
                       )}
                       {props.can.remove && m.userId !== props.meId && (
                         <ConfirmDialog

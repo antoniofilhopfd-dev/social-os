@@ -36,7 +36,7 @@ describe('login', () => {
     const userId = await w.user({ email: 'ana@example.test', password: PASSWORD });
     await w.member({ orgId, userId, role: 'writer' });
     const r = await login(w.db, { email: ' ANA@example.test ', password: PASSWORD, ...origin });
-    expect(r.token.length).toBeGreaterThan(30);
+    expect(r.twoFactorRequired === false && r.token.length).toBeGreaterThan(30);
     const [u] = await w.db.select().from(users).where(eq(users.id, userId));
     expect(u!.passwordHash).toMatch(/^\$argon2id\$/);
     expect(u!.passwordHash).not.toContain(PASSWORD);

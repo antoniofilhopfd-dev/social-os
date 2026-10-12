@@ -7,11 +7,13 @@ import { login } from '@/modules/auth/service';
 const body = z.object({
   email: z.string().trim().min(1).max(254),
   password: z.string().min(1).max(256),
+  code: z.string().trim().max(32).optional(),
 });
 
 export const POST = publicRoute(async ({ req, ip, userAgent }) => {
   const input = await readJson(req, body);
   const result = await login(getDb(), { ...input, ip, userAgent });
+  if (result.twoFactorRequired) return { ok: false, twoFactorRequired: true };
   await setSessionCookie(result.token, result.expiresAt);
   return { ok: true };
 });

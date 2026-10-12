@@ -54,6 +54,7 @@ export function buildNav(ctx: Ctx): NavGroup[] {
   groups.push({
     label: 'Minha conta',
     items: [
+      { href: '/seguranca', label: 'Segurança da conta' },
       { href: '/minhas-sessoes', label: 'Minhas sessões' },
       { href: '/notificacoes/preferencias', label: 'Preferências de notificação' },
     ],

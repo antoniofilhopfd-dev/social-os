@@ -7,6 +7,13 @@ const securityHeaders = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
 ];
 
+// HSTS só quando o site é servido por HTTPS (evita travar ambientes locais em http).
+if (process.env.APP_URL?.startsWith('https://'))
+  securityHeaders.push({
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains',
+  });
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
