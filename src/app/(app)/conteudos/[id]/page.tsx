@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/db';
+import { can } from '@/core/auth/context';
 import { requireAuthPage } from '@/core/auth/server';
 import { AppError } from '@/core/errors';
 import { isId } from '@/core/ids';
@@ -19,6 +20,8 @@ import { Alert, Badge } from '@/ui/components';
 import { getEditor, listBlocks } from '@/modules/editor/service';
 import { listContentAssets } from '@/modules/library/service';
 import { EditorPanel } from './editor-panel';
+import { listContentApprovals } from '@/modules/approvals/service';
+import { ApprovalPanel } from './approval-panel';
 import { ContentForm } from '../content-form';
 import { ContentActions } from './content-actions';
 import { HistoryList } from './history-list';
@@ -51,9 +54,14 @@ export default async function ContentPage({
   const tab =
     editable && internal && aba === 'editor'
       ? 'editor'
-      : aba === 'historico' && editable
-        ? 'historico'
-        : 'dados';
+      : editable &&
+          internal &&
+          aba === 'aprovacao' &&
+          ctx.grants.some((g) => g.permissions.has('approvals:view'))
+        ? 'aprovacao'
+        : aba === 'historico' && editable
+          ? 'historico'
+          : 'dados';
   const [clients, pillars, assignees] = editable
     ? await Promise.all([
         listClients(db, ctx),
@@ -63,6 +71,7 @@ export default async function ContentPage({
     : [[], [], []];
   const history = tab === 'historico' ? await listContentHistory(db, ctx, id) : [];
   const editor = tab === 'editor' ? await getEditor(db, ctx, id) : null;
+  const rounds = tab === 'aprovacao' ? await listContentApprovals(db, ctx, id) : [];
   const blocks = editor ? await listBlocks(db, ctx) : [];
   const linked = editor ? await listContentAssets(db, ctx, id) : [];
   const targets = MANUAL_TRANSITIONS[c.status] ?? [];
@@ -126,6 +135,15 @@ export default async function ContentPage({
               Editor
             </Link>
           )}
+          {internal && ctx.grants.some((g) => g.permissions.has('approvals:view')) && (
+            <Link
+              href={`/conteudos/${id}?aba=aprovacao`}
+              className={`btn btn-sm ${tab === 'aprovacao' ? 'btn-primary' : 'btn-secondary'}`}
+              aria-current={tab === 'aprovacao' ? 'page' : undefined}
+            >
+              Aprovação
+            </Link>
+          )}
           <Link
             href={`/conteudos/${id}?aba=historico`}
             className={`btn btn-sm ${tab === 'historico' ? 'btn-primary' : 'btn-secondary'}`}
@@ -136,7 +154,24 @@ export default async function ContentPage({
         </nav>
       )}
 
-      {tab === 'editor' && editor ? (
+      {tab === 'aprovacao' ? (
+        <ApprovalPanel
+          contentId={id}
+          status={c.status}
+          canSubmit={can(ctx, 'contents:approve', c.clientId)}
+          canReopen={can(ctx, 'contents:approve', c.clientId)}
+          rounds={rounds.map((r) => ({
+            id: r.id,
+            round: r.round,
+            status: r.status,
+            message: r.message,
+            requestedAt: r.requestedAt.toISOString(),
+            decidedAt: r.decidedAt ? r.decidedAt.toISOString() : null,
+            decidedByName: r.decidedByName,
+            decisionComment: r.decisionComment,
+          }))}
+        />
+      ) : tab === 'editor' && editor ? (
         <EditorPanel
           contentId={id}
           clientId={c.clientId}
@@ -233,14 +268,22 @@ export default async function ContentPage({
               {fmt(c.scheduledDate)}
               {c.scheduledTime ? ` às ${c.scheduledTime}` : ''}
             </dd>
-            <dt>Responsável</dt>
-            <dd>{c.assigneeName ?? '—'}</dd>
+            {internal && (
+              <>
+                <dt>Responsável</dt>
+                <dd>{c.assigneeName ?? '—'}</dd>
+              </>
+            )}
             <dt>Prioridade</dt>
             <dd>{PRIORITY_LABELS[c.priority]}</dd>
             <dt>Objetivo</dt>
             <dd style={{ whiteSpace: 'pre-wrap' }}>{c.objective ?? '—'}</dd>
-            <dt>Briefing</dt>
-            <dd style={{ whiteSpace: 'pre-wrap' }}>{c.brief ?? '—'}</dd>
+            {internal && (
+              <>
+                <dt>Briefing</dt>
+                <dd style={{ whiteSpace: 'pre-wrap' }}>{c.brief ?? '—'}</dd>
+              </>
+            )}
           </dl>
         </section>
       )}

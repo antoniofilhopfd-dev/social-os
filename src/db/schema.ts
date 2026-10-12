@@ -633,3 +633,49 @@ export const taskEvents = mysqlTable('task_events', {
   metadata: json('metadata').$type<Record<string, unknown>>(),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------- aprovações
+export const APPROVAL_STATUSES = [
+  'pending',
+  'approved',
+  'changes_requested',
+  'cancelled',
+  'superseded',
+] as const;
+
+export const approvals = mysqlTable('approvals', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  clientId: id('client_id').notNull(),
+  contentId: id('content_id').notNull(),
+  round: int('round', { unsigned: true }).notNull(),
+  versionId: id('version_id').notNull(),
+  status: mysqlEnum('status', APPROVAL_STATUSES).notNull().default('pending'),
+  /** = contentId enquanto pendente; garante no banco uma única rodada pendente por conteúdo. */
+  pendingKey: id('pending_key'),
+  message: text('message'),
+  requestedBy: id('requested_by'),
+  requestedAt: ts('requested_at').notNull().defaultNow(),
+  decidedBy: id('decided_by'),
+  decidedAt: ts('decided_at'),
+  decisionComment: text('decision_comment'),
+});
+
+export const approvalAssets = mysqlTable(
+  'approval_assets',
+  {
+    approvalId: id('approval_id').notNull(),
+    assetId: id('asset_id').notNull(),
+    role: varchar('role', { length: 20 }).notNull().default('attachment'),
+  },
+  (t) => [primaryKey({ columns: [t.approvalId, t.assetId] })],
+);
+
+export const approvalComments = mysqlTable('approval_comments', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  approvalId: id('approval_id').notNull(),
+  authorId: id('author_id'),
+  body: text('body').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});

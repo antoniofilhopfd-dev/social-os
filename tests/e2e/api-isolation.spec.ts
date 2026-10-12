@@ -112,6 +112,16 @@ const protectedRoutes = (f: ReturnType<typeof fx>): [string, string][] => [
   ['POST', '/api/assets'],
   ['GET', `/api/asset-folders?clientId=${f.clientA1}`],
   ['POST', '/api/asset-folders'],
+  // Etapa 08
+  ['GET', '/api/approvals'],
+  ['GET', `/api/approvals/${f.approvalA}`],
+  ['POST', `/api/approvals/${f.approvalA}/decision`],
+  ['POST', `/api/approvals/${f.approvalA}/comments`],
+  ['POST', `/api/approvals/${f.approvalA}/cancel`],
+  ['GET', `/api/approvals/${f.approvalA}/assets/${f.contentA1}/file`],
+  ['GET', `/api/contents/${f.contentA1}/approval`],
+  ['POST', `/api/contents/${f.contentA1}/approval`],
+  ['POST', `/api/contents/${f.contentA1}/reopen`],
   // Etapa 07
   ['GET', '/api/projects'],
   ['POST', '/api/projects'],
@@ -870,4 +880,71 @@ test('estágio 7: org B não alcança projetos/tarefas da A; externo e escopo re
     404,
   );
   expect((await ownerA.get('/api/tasks/nao-e-id')).status()).toBe(404);
+});
+
+test('estágio 8: aprovações isoladas por organização/cliente; cliente não vê notas internas', async () => {
+  const f = fx();
+  const ext = await apiLogin('cliente.a1@example.test');
+  const list = await (await ext.get('/api/approvals')).json();
+  expect(list.items.map((i: { id: string }) => i.id)).toContain(f.approvalA);
+  const detail = await (await ext.get(`/api/approvals/${f.approvalA}`)).json();
+  expect(detail.body.caption).toContain('enviada ao cliente');
+  expect(JSON.stringify(detail)).not.toContain('NOTA-INTERNA');
+  expect(detail.permissions.decide).toBe(true);
+  // a visão interna inclui as notas
+  expect(
+    JSON.stringify(await (await ownerA.get(`/api/approvals/${f.approvalA}`)).json()),
+  ).toContain('NOTA-INTERNA');
+  // org B não alcança
+  for (const [m, url, data] of [
+    ['GET', `/api/approvals/${f.approvalA}`],
+    ['POST', `/api/approvals/${f.approvalA}/decision`, { decision: 'approved' }],
+    ['POST', `/api/approvals/${f.approvalA}/comments`, { body: 'oi' }],
+    ['POST', `/api/approvals/${f.approvalA}/cancel`],
+  ] as [string, string, unknown?][]) {
+    const res = await ownerB.fetch(url, { method: m, data: data ?? {} });
+    expect(res.status(), `${m} ${url}`).toBe(404);
+  }
+  expect(JSON.stringify(await (await ownerB.get('/api/approvals')).json())).not.toContain(
+    f.approvalA,
+  );
+  // equipe não decide pelo cliente; cliente não cancela nem envia
+  expect(
+    (
+      await ownerA.post(`/api/approvals/${f.approvalA}/decision`, {
+        data: { decision: 'approved' },
+      })
+    ).status(),
+  ).toBe(403);
+  expect((await ext.post(`/api/approvals/${f.approvalA}/cancel`)).status()).toBe(403);
+  expect((await ext.post(`/api/contents/${f.contentExtA1}/approval`, { data: {} })).status()).toBe(
+    403,
+  );
+  expect((await ext.post(`/api/contents/${f.contentExtA1}/reopen`)).status()).toBe(403);
+  // validação
+  expect(
+    (
+      await ext.post(`/api/approvals/${f.approvalA}/decision`, {
+        data: { decision: 'changes_requested' },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await ext.post(`/api/approvals/${f.approvalA}/decision`, { data: { decision: 'talvez' } })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (await ext.post(`/api/approvals/${f.approvalA}/comments`, { data: { body: '' } })).status(),
+  ).toBe(400);
+  expect((await ext.get('/api/approvals/nao-e-id')).status()).toBe(404);
+  // cliente não lê a biblioteca interna nem arquivo fora da rodada
+  expect((await ext.get('/api/assets')).status()).toBe(200);
+  expect((await (await ext.get('/api/assets')).json()).items).toEqual([]);
+  expect((await ext.get(`/api/approvals/${f.approvalA}/assets/${ID}/file`)).status()).toBe(404);
+  // conteúdo visto pelo cliente não carrega briefing nem responsável
+  const content = await (await ext.get(`/api/contents/${f.contentExtA1}`)).json();
+  expect(content.brief).toBeNull();
+  expect(content.assigneeUserId).toBeNull();
+  await ext.dispose();
 });

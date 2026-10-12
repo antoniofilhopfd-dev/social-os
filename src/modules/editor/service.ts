@@ -21,7 +21,7 @@ import { bodiesEqual, diffBodies, limitReports, missingForFormat, normalizeBody 
 
 const forbidden = () => new AppError('FORBIDDEN', 'Você não tem permissão para esta ação.');
 const nf = (what: string) => new AppError('NOT_FOUND', `${what} não encontrado.`);
-const EDIT_BLOCKED = ['published', 'archived'];
+const EDIT_BLOCKED = ['published', 'archived', 'awaiting_client', 'approved', 'scheduled'];
 
 async function loadContent(db: Db, ctx: Ctx, id: string, perm: string) {
   const c = await loadForWrite(db, ctx, id, perm); // 404 se fora do escopo; 403 se sem permissão; só equipe interna

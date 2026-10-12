@@ -48,6 +48,18 @@ export const NOTIFICATION_TYPES = {
     label: 'Comentário em tarefa',
     description: 'Quando alguém comenta em uma tarefa atribuída a você.',
   },
+  approval_requested: {
+    label: 'Conteúdo para aprovar',
+    description: 'Quando um conteúdo é enviado para a sua aprovação.',
+  },
+  approval_decided: {
+    label: 'Decisão do cliente',
+    description: 'Quando o cliente aprova um conteúdo ou pede ajustes.',
+  },
+  approval_comment: {
+    label: 'Comentário em aprovação',
+    description: 'Quando alguém comenta em uma aprovação de que você participa.',
+  },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

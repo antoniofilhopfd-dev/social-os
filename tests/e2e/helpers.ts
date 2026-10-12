@@ -31,6 +31,7 @@ export interface Fixtures {
   campaignA: string;
   contentA1: string;
   projectA: string;
+  approvalA: string;
   taskA: string;
   taskB: string;
   contentA2: string;

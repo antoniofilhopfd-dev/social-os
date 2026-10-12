@@ -14,6 +14,9 @@ import { createRequest, listRequestTypes } from '@/modules/requests/service';
 import { createCampaign } from '@/modules/contents/campaigns';
 import { createContent, savePillar } from '@/modules/contents/service';
 import { createProject, createTask } from '@/modules/tasks/service';
+import { saveDraft } from '@/modules/editor/service';
+import { normalizeBody } from '@/modules/editor/rules';
+import { submitForApproval } from '@/modules/approvals/service';
 
 export default async function globalSetup() {
   await resetDatabase();
@@ -166,10 +169,23 @@ export default async function globalSetup() {
         scheduledDate: '2031-03-20',
       })
     ).id;
+    await saveDraft(
+      w.db,
+      ownerA.ctx,
+      contentExtA1,
+      0,
+      normalizeBody({
+        caption: 'Legenda enviada ao cliente para aprovação',
+        productionNotes: 'NOTA-INTERNA-PRODUCAO',
+      }),
+    );
     await w.db
       .update(contents)
-      .set({ status: 'awaiting_client' })
+      .set({ status: 'internal_review' })
       .where(eq(contents.id, contentExtA1));
+    const approvalA = (
+      await submitForApproval(w.db, ownerA.ctx, contentExtA1, 'Segue para aprovação')
+    ).id;
     const contentB1 = (
       await createContent(w.db, ownerB.ctx, {
         clientId: clientB1,
@@ -213,6 +229,7 @@ export default async function globalSetup() {
         campaignA,
         contentA1,
         projectA,
+        approvalA,
         taskA,
         taskB,
         contentA2,

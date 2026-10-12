@@ -5,6 +5,7 @@ import { canOrgWide, type Ctx } from '@/core/auth/context';
 import { listContents } from '@/modules/contents/service';
 import { listRequests } from '@/modules/requests/service';
 import { listTasks } from '@/modules/tasks/service';
+import { listApprovals } from '@/modules/approvals/service';
 
 export type Severity = 'alert' | 'info';
 
@@ -277,8 +278,57 @@ const taskAttention: PendingProvider = {
   },
 };
 
+const approvalAttention: PendingProvider = {
+  id: 'approvals.attention',
+  allowed: (ctx) => ctx.grants.some((g) => g.permissions.has('approvals:view')),
+  async collect(db, ctx, f) {
+    const external = ctx.userKind !== 'internal';
+    const { items } = await listApprovals(db, ctx, {
+      clientId: f.clientId,
+      status: external ? 'pending' : undefined,
+      limit: 100,
+    });
+    const out: PendingItem[] = [];
+    for (const a of items) {
+      const base = {
+        id: `approval:${a.id}`,
+        kind: 'approval',
+        href: `/aprovacoes/${a.id}`,
+        clientId: a.clientId,
+        clientName: a.clientName,
+      };
+      if (external && a.status === 'pending')
+        out.push({
+          ...base,
+          severity: 'alert',
+          title: `Conteúdo para aprovar: ${a.title}`,
+          detail: `Enviado em ${a.requestedAt.toLocaleDateString('pt-BR')}`,
+        });
+      else if (!external && a.status === 'changes_requested')
+        out.push({
+          ...base,
+          severity: 'alert',
+          title: `Cliente pediu ajustes: #${a.contentNumber} ${a.title}`,
+          detail: a.clientName,
+        });
+      else if (!external && a.status === 'pending') {
+        const days = Math.floor((f.now.getTime() - a.requestedAt.getTime()) / 86_400_000);
+        if (days >= 3)
+          out.push({
+            ...base,
+            severity: 'info',
+            title: `Sem resposta do cliente há ${days} dias: #${a.contentNumber} ${a.title}`,
+            detail: a.clientName,
+          });
+      }
+    }
+    return out.slice(0, 30);
+  },
+};
+
 export const PENDING_PROVIDERS: PendingProvider[] = [
   requestAttention,
+  approvalAttention,
   taskAttention,
   contentAttention,
   pendingInvitations,

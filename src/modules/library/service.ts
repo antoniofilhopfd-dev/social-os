@@ -542,7 +542,11 @@ export async function getAsset(
 
 /** Conteúdo do arquivo para entrega. Passa pelo mesmo controle de escopo; arquivos na lixeira não são servidos. */
 export async function readAssetFile(db: Db, storage: StorageDriver, ctx: Ctx, id: string) {
-  const a = await loadAsset(db, ctx, id);
+  return readAssetBytes(storage, await loadAsset(db, ctx, id));
+}
+
+/** Lê os bytes de um arquivo já autorizado por quem chama (biblioteca ou aprovação). */
+export async function readAssetBytes(storage: StorageDriver, a: AssetRow) {
   const data = await storage.get(a.storageKey);
   return {
     mime: a.mime,
