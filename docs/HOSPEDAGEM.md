@@ -1,6 +1,6 @@
 # Validação da hospedagem (Hostinger)
 
-**Situação: PENDENTE de confirmação com o plano real.** Não tenho acesso à conta; abaixo está o que a documentação pública indica e o que ainda precisa ser conferido no hPanel.
+**Situação: PENDENTE de confirmação com o plano real** (o procedimento de implantação e as verificações automáticas já existem: `docs/IMPLANTACAO.md`, `npm run preflight`, `npm run smoke`). Não tenho acesso à conta; abaixo está o que a documentação pública indica e o que ainda precisa ser conferido no hPanel.
 
 ## O que a documentação pública da Hostinger indica
 

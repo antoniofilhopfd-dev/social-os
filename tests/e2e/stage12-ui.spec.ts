@@ -36,6 +36,7 @@ test('administrador configura, testa e remove a conexão; a chave nunca reaparec
 }) => {
   await uiLogin(page, OWNER);
   await page.goto('/configuracoes/integracoes');
+  await page.waitForLoadState('networkidle');
   await expect(page.getByRole('heading', { name: 'Integrações', level: 1 })).toBeVisible();
   await expect(page.getByText('Não configurado')).toBeVisible();
   await expect(page.getByText('Nenhuma rede está conectada.')).toBeVisible();
