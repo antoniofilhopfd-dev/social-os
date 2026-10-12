@@ -5,6 +5,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'UPSTREAM'
   | 'INTERNAL';
 
 const status: Record<ErrorCode, number> = {
@@ -14,6 +15,7 @@ const status: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   RATE_LIMITED: 429,
+  UPSTREAM: 502,
   INTERNAL: 500,
 };
 

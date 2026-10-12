@@ -21,7 +21,11 @@ export const saveDraftSchema = z.object({
   baseRevision: z.number().int().min(0),
   body: editorBodySchema,
 });
-export const saveVersionSchema = z.object({ note: z.string().trim().max(500).optional() });
+export const saveVersionSchema = z.object({
+  note: z.string().trim().max(500).optional(),
+  /** A pessoa usou sugestões de IA neste texto: a versão é marcada como “assistida por IA”. */
+  aiAssisted: z.boolean().optional(),
+});
 export const restoreSchema = z.object({ baseRevision: z.number().int().min(0) });
 export const compareSchema = z.object({
   a: z.coerce.number().int().min(1),

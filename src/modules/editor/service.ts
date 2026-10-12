@@ -21,7 +21,7 @@ import { bodiesEqual, diffBodies, limitReports, missingForFormat, normalizeBody 
 
 const forbidden = () => new AppError('FORBIDDEN', 'Você não tem permissão para esta ação.');
 const nf = (what: string) => new AppError('NOT_FOUND', `${what} não encontrado.`);
-const EDIT_BLOCKED = ['published', 'archived', 'awaiting_client', 'approved', 'scheduled'];
+export const EDIT_BLOCKED = ['published', 'archived', 'awaiting_client', 'approved', 'scheduled'];
 
 async function loadContent(db: Db, ctx: Ctx, id: string, perm: string) {
   const c = await loadForWrite(db, ctx, id, perm); // 404 se fora do escopo; 403 se sem permissão; só equipe interna
@@ -160,7 +160,13 @@ export async function listVersions(db: Db, ctx: Ctx, contentId: string) {
 }
 
 /** Congela o rascunho atual como uma versão numerada e imutável. */
-export async function saveVersion(db: Db, ctx: Ctx, contentId: string, note?: string) {
+export async function saveVersion(
+  db: Db,
+  ctx: Ctx,
+  contentId: string,
+  note?: string,
+  opts: { aiAssisted?: boolean } = {},
+) {
   const c = await loadContent(db, ctx, contentId, 'contents:edit');
   if (EDIT_BLOCKED.includes(c.status))
     throw new AppError('CONFLICT', 'Este conteúdo não pode mais ser editado nesta situação.');
@@ -194,7 +200,7 @@ export async function saveVersion(db: Db, ctx: Ctx, contentId: string, note?: st
           versionNumber: number,
           body: normalizeBody(draft.body),
           note: note?.trim() || null,
-          source: 'human',
+          source: opts.aiAssisted ? 'ai_assisted' : 'human',
           createdBy: ctx.userId,
         });
         await audit(tx, {

@@ -24,7 +24,7 @@
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
     "jobs:daily": "tsx scripts/jobs-daily.ts",
-    "screenshots:e2e": "SCREENSHOTS=1 playwright test tests/e2e/screenshots.spec.ts tests/e2e/screenshots-06.spec.ts tests/e2e/screenshots-07.spec.ts tests/e2e/screenshots-08.spec.ts tests/e2e/screenshots-09.spec.ts tests/e2e/screenshots-10.spec.ts tests/e2e/screenshots-11.spec.ts"
+    "screenshots:e2e": "SCREENSHOTS=1 playwright test tests/e2e/screenshots.spec.ts tests/e2e/screenshots-06.spec.ts tests/e2e/screenshots-07.spec.ts tests/e2e/screenshots-08.spec.ts tests/e2e/screenshots-09.spec.ts tests/e2e/screenshots-10.spec.ts tests/e2e/screenshots-11.spec.ts tests/e2e/screenshots-12.spec.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

@@ -74,6 +74,8 @@ export function EditorPanel(props: {
   versions: VersionItem[];
   blocks: BlockItem[];
   linked: LinkedAsset[];
+  aiEnabled: boolean;
+  canManageIntegrations: boolean;
 }) {
   const { contentId, format, network, canEdit } = props;
   const [body, setBody] = useState<EditorBody>(props.initialBody);
@@ -87,6 +89,10 @@ export function EditorPanel(props: {
   const [cmpA, setCmpA] = useState('');
   const [cmpB, setCmpB] = useState('');
   const [pick, setPick] = useState<PickAsset[] | null>(null);
+  const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [ai, setAi] = useState<{ task: string; options: string[]; notes: string[] } | null>(null);
+  const [usedAi, setUsedAi] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef(body);
   const revRef = useRef(revision);
@@ -167,9 +173,11 @@ export function EditorPanel(props: {
     if (dirty.current) await save();
     const r = await api('POST', `/api/contents/${contentId}/editor/versions`, {
       note: note || undefined,
+      aiAssisted: usedAi || undefined,
     });
     if (r.ok) {
       setNote('');
+      setUsedAi(false);
       setMessage('Versão salva.');
       await reloadVersions();
     } else setMessage(r.error?.message ?? 'Não foi possível salvar a versão.');
@@ -248,6 +256,34 @@ export function EditorPanel(props: {
     if (j < 0 || j >= s.length) return;
     [s[i], s[j]] = [s[j]!, s[i]!];
     change({ slides: s });
+  }
+
+  const AI_TASKS: { task: string; label: string; field: TextField }[] = [
+    { task: 'caption', label: 'Sugerir legendas', field: 'caption' },
+    { task: 'tone_variations', label: 'Variar o tom da legenda', field: 'caption' },
+    { task: 'titles', label: 'Sugerir ganchos', field: 'hook' },
+    { task: 'cta', label: 'Sugerir chamadas (CTA)', field: 'cta' },
+    { task: 'hashtags', label: 'Sugerir hashtags', field: 'hashtags' },
+    { task: 'alt_text', label: 'Sugerir texto alternativo', field: 'altText' },
+    { task: 'proofread', label: 'Revisar ortografia', field: 'caption' },
+    { task: 'clarity', label: 'Deixar mais claro', field: 'caption' },
+  ];
+  async function askAi(task: string) {
+    setAiBusy(task);
+    setAiError(null);
+    const r = await api<{ options: string[]; notes: string[] }>(
+      'POST',
+      `/api/contents/${contentId}/ai-suggestions`,
+      { task },
+    );
+    setAiBusy(null);
+    if (r.ok) setAi({ task, options: r.data!.options, notes: r.data!.notes });
+    else setAiError(r.error?.message ?? 'Não foi possível gerar sugestões.');
+  }
+  function applyOption(field: TextField, text: string, append: boolean) {
+    const cur = bodyRef.current[field];
+    change({ [field]: append && cur ? `${cur}\n${text}` : text } as Partial<EditorBody>);
+    setUsedAi(true);
   }
 
   const renderField = (f: TextField) => {
@@ -608,12 +644,80 @@ export function EditorPanel(props: {
         )}
       </section>
 
-      <section className="section" aria-labelledby="ed-ia">
+      <section className="section stack" aria-labelledby="ed-ia">
         <h2 id="ed-ia">Assistente de IA</h2>
-        <p className="muted">
-          Nenhum assistente de IA está configurado. A integração será habilitada na etapa de
-          integrações externas.
-        </p>
+        {!props.aiEnabled ? (
+          <p className="muted">
+            Nenhum assistente de IA está configurado nesta organização.{' '}
+            {props.canManageIntegrations ? (
+              <a href="/configuracoes/integracoes">Configurar em Integrações</a>
+            ) : (
+              'Peça a um administrador para configurar em Integrações.'
+            )}
+          </p>
+        ) : (
+          <>
+            <p className="muted">
+              As sugestões são geradas por IA a partir do briefing e do texto atual (sem observações
+              internas). Revise sempre antes de usar: podem conter erros ou informações inventadas.
+            </p>
+            {aiError && <Alert tone="danger">{aiError}</Alert>}
+            {canEdit && (
+              <div className="row">
+                {AI_TASKS.map((t) => (
+                  <Button
+                    key={t.task}
+                    variant="secondary"
+                    className="btn-sm"
+                    disabled={aiBusy !== null}
+                    onClick={() => void askAi(t.task)}
+                  >
+                    {aiBusy === t.task ? 'Gerando…' : t.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {ai && (
+              <div className="stack" data-testid="ai-result">
+                <Badge tone="info">Gerado por IA — revise antes de usar</Badge>
+                {ai.notes.length > 0 && (
+                  <Alert tone="warning">Verificar: {ai.notes.join(' · ')}</Alert>
+                )}
+                <ul className="plain-list">
+                  {ai.options.map((o, i) => {
+                    const field = AI_TASKS.find((t) => t.task === ai.task)!.field;
+                    return (
+                      <li key={i} className="stack" style={{ gap: 6 }}>
+                        <div className="preview" style={{ whiteSpace: 'pre-wrap' }}>
+                          {o}
+                        </div>
+                        {canEdit && (
+                          <div className="row">
+                            <Button
+                              className="btn-sm"
+                              aria-label={`Usar opção ${i + 1} em ${FIELD_LABELS[field]}`}
+                              onClick={() => applyOption(field, o, false)}
+                            >
+                              Usar em “{FIELD_LABELS[field]}” (substitui)
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              className="btn-sm"
+                              aria-label={`Acrescentar opção ${i + 1} em ${FIELD_LABELS[field]}`}
+                              onClick={() => applyOption(field, o, true)}
+                            >
+                              Acrescentar ao final
+                            </Button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
       </section>
     </div>
   );

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/db';
-import { can } from '@/core/auth/context';
+import { can, canOrgWide } from '@/core/auth/context';
 import { requireAuthPage } from '@/core/auth/server';
 import { AppError } from '@/core/errors';
 import { isId } from '@/core/ids';
@@ -20,6 +20,7 @@ import { Alert, Badge } from '@/ui/components';
 import { getEditor, listBlocks } from '@/modules/editor/service';
 import { listContentAssets } from '@/modules/library/service';
 import { EditorPanel } from './editor-panel';
+import { aiAvailableFor } from '@/modules/integrations/service';
 import { listContentApprovals } from '@/modules/approvals/service';
 import { ApprovalPanel } from './approval-panel';
 import { PublicationPanel } from './publication-panel';
@@ -83,6 +84,7 @@ export default async function ContentPage({
     tab === 'publicacao'
       ? (await listPublications(db, ctx, { contentId: id, limit: 50 })).items
       : [];
+  const aiEnabled = editor ? await aiAvailableFor(db, ctx.organizationId) : false;
   const blocks = editor ? await listBlocks(db, ctx) : [];
   const linked = editor ? await listContentAssets(db, ctx, id) : [];
   const targets = MANUAL_TRANSITIONS[c.status] ?? [];
@@ -226,6 +228,8 @@ export default async function ContentPage({
           }))}
           blocks={blocks.map((b) => ({ id: b.id, name: b.name, kind: b.kind, text: b.text }))}
           linked={linked}
+          aiEnabled={aiEnabled}
+          canManageIntegrations={canOrgWide(ctx, 'integrations:manage_integrations')}
         />
       ) : tab === 'historico' ? (
         <HistoryList

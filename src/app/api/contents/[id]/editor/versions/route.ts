@@ -10,5 +10,7 @@ export const GET = route<{ id: string }>(async ({ ctx, params }) => ({
 
 export const POST = route<{ id: string }>(async ({ req, ctx, params }) => {
   const input = await readJson(req, saveVersionSchema);
-  return saveVersion(getDb(), ctx, idParam(params.id), input.note);
+  return saveVersion(getDb(), ctx, idParam(params.id), input.note, {
+    aiAssisted: input.aiAssisted,
+  });
 });

@@ -18,7 +18,9 @@ export type AiTask =
   | 'clarity'
   | 'adapt_for_network'
   | 'brief_summary'
-  | 'titles';
+  | 'titles'
+  | 'hashtags'
+  | 'alt_text';
 
 export interface AiContext {
   client: {
@@ -53,9 +55,13 @@ export interface AiRequest {
   instruction?: string;
 }
 export interface AiResult {
-  text: string;
+  /** Opções de texto, já separadas. Sempre sugestões para revisão humana. */
+  options: string[];
+  /** Itens que exigem verificação humana (fatos, números, promessas). */
   notes: string[];
   provider: string;
+  model?: string;
+  usage?: { inputTokens: number | null; outputTokens: number | null };
 }
 
 export interface AiProvider {

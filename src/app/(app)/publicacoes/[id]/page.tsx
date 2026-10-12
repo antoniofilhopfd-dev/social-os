@@ -108,6 +108,14 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
         </dd>
       </dl>
 
+      {p.status === 'scheduled' && (
+        <p className="muted" data-testid="auto-publish-note">
+          Publicação automática indisponível: a conexão com a rede não está configurada (veja os
+          requisitos em <Link href="/configuracoes/integracoes">Integrações</Link>). Publique
+          manualmente e registre o resultado abaixo.
+        </p>
+      )}
+
       <PublicationActions
         id={p.id}
         status={p.status}

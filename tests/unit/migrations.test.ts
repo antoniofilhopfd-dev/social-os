@@ -51,6 +51,7 @@ run('migrações (MySQL real)', () => {
       '0013',
       '0014',
       '0015',
+      '0016',
     ]);
     expect(await tables()).toEqual(
       expect.arrayContaining(['organizations', 'users', 'sessions', 'audit_logs', 'memberships']),

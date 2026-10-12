@@ -29,6 +29,8 @@ export default defineConfig({
       DATABASE_URL: testDb,
       APP_URL: `http://localhost:${PORT}`,
       TRUST_PROXY: 'false',
+      // Servidor HTTP local do teste (tests/e2e/stage12-ui.spec.ts) no lugar do serviço de IA
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:3199',
     },
   },
 });

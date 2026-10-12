@@ -48,6 +48,8 @@ export function buildNav(ctx: Ctx): NavGroup[] {
   if (canOrgWide(ctx, 'team:view')) admin.push({ href: '/equipe', label: 'Equipe' });
   if (canOrgWide(ctx, 'roles:view')) admin.push({ href: '/funcoes', label: 'Funções' });
   if (canOrgWide(ctx, 'audit:view')) admin.push({ href: '/auditoria', label: 'Auditoria' });
+  if (canOrgWide(ctx, 'integrations:view'))
+    admin.push({ href: '/configuracoes/integracoes', label: 'Integrações' });
   if (canOrgWide(ctx, 'settings:view'))
     admin.push({ href: '/configuracoes/solicitacoes', label: 'Tipos de solicitação' });
   if (admin.length) groups.push({ label: 'Administração', items: admin });

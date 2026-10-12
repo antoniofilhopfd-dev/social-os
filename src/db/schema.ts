@@ -762,3 +762,35 @@ export const recoveryCodes = mysqlTable('recovery_codes', {
   usedAt: ts('used_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+// -------------------------------------------------------------- integrações
+export const integrationConnections = mysqlTable('integration_connections', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  provider: varchar('provider', { length: 40 }).notNull(),
+  status: mysqlEnum('status', ['active', 'disabled', 'error']).notNull().default('active'),
+  /** Credencial cifrada (AES-256-GCM); nunca devolvida por nenhuma API. */
+  secretEnc: varchar('secret_enc', { length: 1000 }),
+  secretHint: varchar('secret_hint', { length: 12 }),
+  model: varchar('model', { length: 80 }),
+  lastCheckedAt: ts('last_checked_at'),
+  lastError: varchar('last_error', { length: 300 }),
+  createdBy: id('created_by'),
+  updatedBy: id('updated_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const aiUsage = mysqlTable('ai_usage', {
+  id: id().primaryKey(),
+  organizationId: id('organization_id').notNull(),
+  userId: id('user_id'),
+  contentId: id('content_id'),
+  task: varchar('task', { length: 40 }).notNull(),
+  provider: varchar('provider', { length: 40 }).notNull(),
+  model: varchar('model', { length: 80 }),
+  status: mysqlEnum('status', ['ok', 'error']).notNull(),
+  inputTokens: int('input_tokens', { unsigned: true }),
+  outputTokens: int('output_tokens', { unsigned: true }),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
