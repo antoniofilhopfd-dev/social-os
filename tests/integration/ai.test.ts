@@ -47,8 +47,7 @@ beforeAll(async () => {
   writer = await w.actor(A, 'writer');
   viewer = await w.actor(A, 'viewer');
   clientA1 = (await createClient(w.db, owner.ctx, { name: 'Cliente A1' })).id;
-  clientA2 = (await createClient(w.db, owner.ctx, { name: 'Cliente A2 SEGREDO-DO-OUTRO-CLIENTE' }))
-    .id;
+  await createClient(w.db, owner.ctx, { name: 'Cliente A2 SEGREDO-DO-OUTRO-CLIENTE' });
   await updateClient(w.db, owner.ctx, clientA1, {
     toneOfVoice: 'Tom acolhedor e direto',
     forbiddenTopics: 'política',
